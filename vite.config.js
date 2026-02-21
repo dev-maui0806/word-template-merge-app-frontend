@@ -12,7 +12,19 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: apiUrl,
-          changeOrigin: true
+          changeOrigin: true,
+          timeout: 30000,
+          configure: (proxy) => {
+            proxy.on('error', (err, _req, res) => {
+              if (!res.headersSent) {
+                res.writeHead(502, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  error: 'Backend unreachable',
+                  message: 'Is the backend running at ' + apiUrl + '?'
+                }));
+              }
+            });
+          }
         },
       },
     },

@@ -1,4 +1,7 @@
-const BASE = '/api';
+// Use backend URL in production (e.g. Vercel → Render); use /api for local dev (Vite proxy)
+const BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api';
 
 export async function api(url, options = {}) {
   const at = localStorage.getItem('accessToken');
