@@ -1,0 +1,188 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
+.illustration {
+  background: linear-gradient(135deg, #e8f4f8 0%, #f0f4f8 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.illustration img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.dark .illustration {
+  background: linear-gradient(135deg, #1a2530 0%, #252d35 100%);
+}
+
+.card {
+  padding: 3rem;
+  background: var(--bg-card);
+  border-radius: 16px;
+  margin: 2rem;
+  max-width: 430px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 1.5rem;
+}
+
+.brandIcon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandIcon .material-icons {
+  font-size: 24px;
+  color: white;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.card h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+}
+
+.sub {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.googleBtn {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* GSI button: light grey border, white bg, Google G + "Sign in with Google" */
+.googleBtn iframe,
+.googleBtn > div {
+  min-width: 100% !important;
+}
+
+.or {
+  text-align: center;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.or::before,
+.or::after {
+  content: '';
+  display: inline-block;
+  width: 40%;
+  height: 1px;
+  background: var(--border);
+  vertical-align: middle;
+  margin: 0 0.5rem;
+}
+
+.card input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.card input::placeholder {
+  color: var(--text-secondary);
+}
+
+.toggleMethod {
+  margin-bottom: 0.75rem;
+}
+
+.toggleMethod button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--accent);
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.submit {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.back {
+  width: 100%;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.footer {
+  margin: 1.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.footer a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+@media (max-width: 800px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+  .illustration {
+    display: none;
+  }
+}

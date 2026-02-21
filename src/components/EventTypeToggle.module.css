@@ -1,0 +1,54 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.pills,
+.subPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pills button,
+.subPills button {
+  padding: 0.5rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.pills button:hover,
+.subPills button:hover {
+  background: var(--border);
+}
+
+.pills button.active,
+.subPills button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.subPills {
+  margin-top: 0.25rem;
+}
+
+.subLabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  align-self: center;
+  margin-right: 0.5rem;
+}

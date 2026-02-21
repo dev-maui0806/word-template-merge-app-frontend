@@ -1,0 +1,17 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: '"Inter", "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+}
+
+a {
+  text-decoration: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
