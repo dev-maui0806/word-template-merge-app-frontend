@@ -536,7 +536,7 @@ export default function Admin() {
                         }}
                         variant="outlined"
                       >
-                        Upload
+                        {t.exists ? 'Change' : 'Upload'}
                       </Button>
                       {t.exists && (
                         <Tooltip title="Delete template">
