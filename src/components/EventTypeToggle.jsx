@@ -25,14 +25,14 @@ export default function EventTypeToggle() {
         minHeight: showImeSub ? undefined : 60,
       }}
     >
-      <Typography
+      {/* <Typography
         variant="caption"
         color="text.secondary"
         fontWeight={600}
         sx={{ width:"max-content", letterSpacing: '0.08em', padding:"2px 10px", borderBlockEnd: '2px solid rgb(192, 53, 53)' }}
       >
         SELECT EVENT TYPE
-      </Typography>
+      </Typography> */}
       <Box
         sx={{
           display: 'flex',

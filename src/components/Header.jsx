@@ -9,19 +9,31 @@ import {
   Menu,
   MenuItem,
   Typography,
-  Switch,
+  TextField,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import LightModeIcon from '@mui/icons-material/LightMode';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockIcon from '@mui/icons-material/Lock';
+import SearchIcon from '@mui/icons-material/Search';
+import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import CloseIcon from '@mui/icons-material/Close';
 import { useTheme as useAppTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import CountryToggle from './CountryToggle.jsx';
+import ContactDirectory from './ContactDirectory.jsx';
+import CalendarWidget from './CalendarWidget.jsx';
+import DocumentHistoryDialog from './DocumentHistoryDialog.jsx';
 
 const HEADER_HEIGHT = { xs: 56, sm: 64 };
-const ADMIN_EMAIL = 'ipkaushal16@gmail.com';
+const ADMIN_EMAIL = 'yasasrree02@gmail.com';
 
 function isAdmin(user) {
   if (!user) return false;
@@ -29,17 +41,20 @@ function isAdmin(user) {
 }
 
 export default function Header() {
+  const navigate = useNavigate();
   const { dark, toggleTheme } = useAppTheme();
   const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [contactsOpen, setContactsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleMenu = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
   const handleSettings = () => {
     handleClose();
-    navigate('/settings');
+    window.location.href = '/settings';
   };
   const handleLogout = () => {
     handleClose();
@@ -106,27 +121,98 @@ export default function Header() {
           </Box>
         </Link>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.25, sm: 0.5 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            <Box
-              component="span"
-              sx={{
-                color: 'text.secondary',
-                fontSize: '0.7rem',
-                mr: 0.25,
-                display: { xs: 'none', sm: 'inline' },
-              }}
-            >
-              {dark ? 'Night' : 'Day'}
-            </Box>
-            <Switch
+        {/* Center search + right controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flex: 1, justifyContent: 'flex-end' }}>
+          {/* Search templates pill */}
+          <Box
+            sx={{
+              flex: { xs: 0, sm: 1 },
+              maxWidth: 420,
+              mx: { xs: 0.5, sm: 2 },
+              display: { xs: 'none', sm: 'block' },
+            }}
+          >
+            <TextField
+              fullWidth
               size="small"
-              checked={dark}
-              onChange={toggleTheme}
-              sx={{ m: 0 }}
-              inputProps={{ 'aria-label': 'Dark mode' }}
+              placeholder="Search templates..."
+              onClick={() => setSearchOpen(true)}
+              InputProps={{
+                readOnly: true,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 999,
+                  bgcolor: 'background.default',
+                  px: 1,
+                },
+              }}
             />
           </Box>
+
+         
+
+          {/* Contacts & Calendar buttons, matching pill style */}
+          {isAuthenticated && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 1 }}>
+
+               {/* Dark / light toggle as sun/moon icon */}
+           <IconButton
+            size="small"
+            aria-label="Toggle dark mode"
+            onClick={toggleTheme}
+            sx={{
+              borderRadius: 999,
+              bgcolor: 'action.hover',
+              '&:hover': { bgcolor: 'action.selected' },
+            }}
+          >
+            {dark ? (
+              <DarkModeIcon sx={{ fontSize: 18 }} />
+            ) : (
+              <LightModeIcon sx={{ fontSize: 18 }} />
+            )}
+          </IconButton>
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<ContactPhoneIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setContactsOpen(true)}
+                sx={{
+                  borderRadius: 999,
+                  textTransform: 'none',
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.8rem',
+                }}
+              >
+                Contacts
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<CalendarMonthIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setCalendarOpen(true)}
+                sx={{
+                  borderRadius: 999,
+                  textTransform: 'none',
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.8rem',
+                }}
+              >
+                Calendar
+              </Button>
+            </Box>
+          )}
+
+          
           <CountryToggle />
           {isAuthenticated && user ? (
             <>
@@ -194,6 +280,47 @@ export default function Header() {
           )}
         </Box>
       </Toolbar>
+
+      {/* Search templates dialog (document history + search) */}
+      <DocumentHistoryDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      {/* Contacts dialog */}
+      <Dialog
+        open={contactsOpen}
+        onClose={() => setContactsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">Contacts</Typography>
+          <IconButton aria-label="Close" onClick={() => setContactsOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <ContactDirectory />
+        </DialogContent>
+      </Dialog>
+
+      {/* Calendar dialog */}
+      <Dialog
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">Calendar</Typography>
+          <IconButton aria-label="Close" onClick={() => setCalendarOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <CalendarWidget open onClose={() => setCalendarOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </AppBar>
   );
 }
