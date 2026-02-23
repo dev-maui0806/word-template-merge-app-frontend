@@ -3,8 +3,10 @@ import { AppProvider } from './context/AppContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 import Home from './pages/Home.jsx';
 import Form from './pages/Form.jsx';
+import Admin from './pages/Admin.jsx';
 import Settings from './pages/Settings.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Login from './pages/auth/Login.jsx';
@@ -41,6 +43,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Checkout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminRoute>
+                      <Admin />
+                    </AdminRoute>
                   </ProtectedRoute>
                 }
               />

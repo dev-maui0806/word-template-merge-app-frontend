@@ -12,7 +12,7 @@ import {
   Switch,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockIcon from '@mui/icons-material/Lock';
@@ -21,6 +21,12 @@ import { useAuth } from '../context/AuthContext.jsx';
 import CountryToggle from './CountryToggle.jsx';
 
 const HEADER_HEIGHT = { xs: 56, sm: 64 };
+const ADMIN_EMAIL = 'ipkaushal16@gmail.com';
+
+function isAdmin(user) {
+  if (!user) return false;
+  return user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || user.role === 'admin';
+}
 
 export default function Header() {
   const { dark, toggleTheme } = useAppTheme();
@@ -149,6 +155,16 @@ export default function Header() {
                   },
                 }}
               >
+                {isAdmin(user) && (
+                  <MenuItem
+                    component={Link}
+                    to="/admin"
+                    onClick={handleClose}
+                  >
+                    <AdminPanelSettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                    Admin
+                  </MenuItem>
+                )}
                 <MenuItem onClick={handleSettings}>
                   <PersonOutlineIcon sx={{ mr: 1.5, fontSize: 20 }} />
                   Settings
