@@ -14,90 +14,20 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../api/client.js';
 
+const GMAIL_SUFFIX = '@gmail.com';
+
 export default function Register() {
   const navigate = useNavigate();
   const { persist } = useAuth();
-  const [method, setMethod] = useState('email');
   const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState('input');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const googleBtnRef = useRef(null);
 
   const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
   if (!localStorage.getItem('deviceId')) localStorage.setItem('deviceId', deviceId);
-
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
-    try {
-      const res = method === 'email'
-        ? await api('/auth/otp/email/send', {
-            method: 'POST',
-            body: JSON.stringify({ email, deviceId, userAgent: navigator.userAgent }),
-          })
-        : await api('/auth/otp/mobile/send', {
-            method: 'POST',
-            body: JSON.stringify({ mobile, deviceId, userAgent: navigator.userAgent }),
-          });
-      
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to send OTP');
-      }
-      
-      setSuccess(`OTP sent successfully to your ${method === 'email' ? 'email' : 'mobile number'}!`);
-      setStep('verify');
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(''), 5000);
-    } catch (err) {
-      setError(err.message || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      let res;
-      if (method === 'email') {
-        res = await api('/auth/otp/email/verify', {
-          method: 'POST',
-          body: JSON.stringify({ email, otp, deviceId, userAgent: navigator.userAgent }),
-        });
-      } else {
-        res = await api('/auth/otp/mobile/verify', {
-          method: 'POST',
-          body: JSON.stringify({ mobile, otp, email: email || undefined, deviceId, userAgent: navigator.userAgent }),
-        });
-      }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Invalid or expired OTP');
-      if (!data.accessToken || !data.refreshToken || !data.user) throw new Error('Unexpected OTP response from server');
-      persist(data.accessToken, data.refreshToken, data.user);
-      navigate('/');
-    } catch (err) {
-      setError(err.message || 'Invalid OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangeContact = () => {
-    setStep('input');
-    setEmail('');
-    setMobile('');
-    setOtp('');
-    setError('');
-  };
 
   const handleGoogleCallback = async (response) => {
     setLoading(true);
@@ -154,6 +84,52 @@ export default function Register() {
     }
   }, []);
 
+  const normalizedEmail = email.trim().toLowerCase();
+  const isGmail = normalizedEmail.endsWith(GMAIL_SUFFIX) && normalizedEmail.length > GMAIL_SUFFIX.length;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (!isGmail) {
+      setError('Please use your Gmail address (@gmail.com).');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          deviceId,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+      if (!data.accessToken || !data.refreshToken || !data.user) {
+        throw new Error('Unexpected response from server');
+      }
+      persist(data.accessToken, data.refreshToken, data.user);
+      navigate('/');
+    } catch (err) {
+      setError(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -176,19 +152,53 @@ export default function Register() {
               : 'linear-gradient(135deg, #e8f4f8 0%, #f0f4f8 100%)',
         }}
       >
-        <img src="/auth-img.webp" alt="Sign up" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; }} />
+        <img
+          src="/auth-img.webp"
+          alt="Sign up"
+          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'center', p: { xs: 2, sm: 4 } }}>
         <Card sx={{ maxWidth: 430, width: '100%' }}>
           <CardContent sx={{ p: 3 }}>
-            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 1, textDecoration: 'none', color: 'inherit', marginBottom: 2 }}>
-              <Box sx={{ width: 40, height: 40, borderRadius: 1, mr:1, bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Link
+              to="/"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                textDecoration: 'none',
+                color: 'inherit',
+                marginBottom: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1,
+                  mr: 1,
+                  bgcolor: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <DescriptionIcon sx={{ color: 'white', fontSize: 24 }} />
               </Box>
-              <Typography variant="h6" fontWeight={700}>FA DOC</Typography>
+              <Typography variant="h6" fontWeight={700}>
+                FA DOC
+              </Typography>
             </Link>
-            <Typography variant="h5" sx={{ mb: 1, mt: 1, fontWeight: 700 }}>Sign Up to your Account</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Welcome! Please enter your details.</Typography>
+            <Typography variant="h5" sx={{ mb: 1, mt: 1, fontWeight: 700 }}>
+              Create your Account
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Sign up with Google or use your Gmail address and a password.
+            </Typography>
 
             <Box ref={googleBtnRef} sx={{ width: '100%', minHeight: 48, mb: 2, display: 'flex', justifyContent: 'center' }} aria-label="Sign up with Google" />
 
@@ -196,74 +206,62 @@ export default function Register() {
               <Typography variant="caption" color="text.secondary">or</Typography>
             </Divider>
 
-            {step === 'input' ? (
-              <Box component="form" onSubmit={handleSendOtp}>
-                {method === 'email' ? (
-                  <TextField
-                    type="email"
-                    label="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    fullWidth
-                    sx={{ mb: 1.5 }}
-                  />
-                ) : (
-                  <>
-                    <TextField
-                      type="email"
-                      label="Email (optional)"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      fullWidth
-                      sx={{ mb: 1.5 }}
-                    />
-                    <TextField
-                      type="tel"
-                      label="Phone Number"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      required
-                      fullWidth
-                      sx={{ mb: 1.5 }}
-                    />
-                  </>
-                )}
-                <Button type="button" size="small" onClick={() => setMethod((m) => (m === 'email' ? 'mobile' : 'email'))} sx={{ mb: 1.5, textTransform: 'none' }}>
-                  Use {method === 'email' ? 'mobile' : 'email'} instead
-                </Button>
-                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1.5 }}>{error}</Alert>}
-                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 1.5 }}>{success}</Alert>}
-                <Button type="submit" variant="contained"   fullWidth disabled={loading} sx={{ padding:1, fontSize:"1.15rem" }}>Send OTP</Button>
-              </Box>
-            ) : (
-              <Box component="form" onSubmit={handleVerifyOtp}>
-                <TextField
-                  label="Enter 6-digit OTP"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  inputProps={{ maxLength: 6 }}
-                  required
-                  fullWidth
-                  sx={{ mb: 1.5 }}
-                />
-                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1.5 }}>{error}</Alert>}
-                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 1.5 }}>{success}</Alert>}
-                <Button type="submit" variant="contained" fullWidth disabled={loading} sx={{ padding: 1, fontSize: '1.15rem' }}>Verify OTP</Button>
-                <Button
-                  type="button"
-                  fullWidth
-                  size="small"
-                  onClick={handleChangeContact}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Change {method}
-                </Button>
-              </Box>
-            )}
+            <Box component="form" onSubmit={handleSubmit}>
+              <TextField
+                type="email"
+                label="email"
+                placeholder="you@mail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                fullWidth
+                sx={{ mb: 1.5 }}
+                helperText={email && !isGmail ? 'Only @gmail.com addresses are allowed' : ''}
+                error={!!email && !isGmail}
+              />
+              <TextField
+                type="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                fullWidth
+                sx={{ mb: 1.5 }}
+                helperText="At least 8 characters"
+                inputProps={{ minLength: 8 }}
+              />
+              <TextField
+                type="password"
+                label="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                fullWidth
+                sx={{ mb: 1.5 }}
+                error={!!confirmPassword && password !== confirmPassword}
+                helperText={confirmPassword && password !== confirmPassword ? 'Passwords do not match' : ''}
+              />
+              {error && (
+                <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1.5 }}>
+                  {error}
+                </Alert>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                // disabled={loading || !isGmail || password.length < 8 || password !== confirmPassword}
+                sx={{ padding: 1, fontSize: '1.15rem' }}
+              >
+                {loading ? 'Creating account…' : 'Create account'}
+              </Button>
+            </Box>
 
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Already have an account? <Link to="/auth/login" style={{ color: 'inherit', fontWeight: 600 }}>Sign In</Link>
+              Already have an account?{' '}
+              <Link to="/auth/login" style={{ color: 'inherit', fontWeight: 600 }}>
+                Sign In
+              </Link>
             </Typography>
           </CardContent>
         </Card>

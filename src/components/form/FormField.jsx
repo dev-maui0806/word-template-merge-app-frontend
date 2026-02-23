@@ -2,7 +2,10 @@
  * FormField: Renders the appropriate input component based on field definition.
  */
 
+import dayjs from 'dayjs';
 import { Box, TextField, Chip } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const INPUT_PROPS = { InputLabelProps: { shrink: true } };
@@ -31,25 +34,37 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
   }
 
   if (type === 'date') {
+    const dateValue = value && dayjs(value).isValid() ? dayjs(value) : null;
     return (
-      <TextField
-        {...common}
+      <DatePicker
         label={label}
-        type="date"
-        value={value ?? ''}
-        onChange={(e) => onChange(name, e.target.value)}
+        value={dateValue}
+        onChange={(date) => onChange(name, date ? date.format('YYYY-MM-DD') : '')}
+        slotProps={{
+          textField: {
+            ...common,
+            fullWidth: true,
+          },
+        }}
       />
     );
   }
 
   if (type === 'time') {
+    const timeValue = value && /^\d{1,2}:\d{2}(?::\d{2})?$/.test(String(value))
+      ? dayjs(`1970-01-01T${value}`)
+      : null;
     return (
-      <TextField
-        {...common}
+      <TimePicker
         label={label}
-        type="time"
-        value={value ?? ''}
-        onChange={(e) => onChange(name, e.target.value)}
+        value={timeValue}
+        onChange={(time) => onChange(name, time ? time.format('HH:mm') : '')}
+        slotProps={{
+          textField: {
+            ...common,
+            fullWidth: true,
+          },
+        }}
       />
     );
   }

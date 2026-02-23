@@ -236,8 +236,8 @@ export default function Login() {
 
             <Divider sx={{ my: 2 }}><Typography variant="caption" color="text.secondary">or</Typography></Divider>
 
-            {/* Mode toggle: OTP vs PIN */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            {/* Mode toggle: Google/OTP or PIN */}
+            <Box sx={{ display: 'flex', gap: 0.5, mb: 2, flexWrap: 'wrap' }}>
               <Button
                 size="small"
                 variant={authMode === 'otp' ? 'contained' : 'text'}
@@ -245,9 +245,9 @@ export default function Login() {
                   setAuthMode('otp');
                   setError('');
                 }}
-                sx={{ textTransform: 'none', flex: 1 }}
+                sx={{ textTransform: 'none', flex: 1, minWidth: 0 }}
               >
-                Use OTP / Google
+                Google / OTP
               </Button>
               <Button
                 size="small"
@@ -256,9 +256,9 @@ export default function Login() {
                   setAuthMode('pin');
                   setError('');
                 }}
-                sx={{ textTransform: 'none', flex: 1 }}
+                sx={{ textTransform: 'none', flex: 1, minWidth: 0 }}
               >
-                Use PIN
+                PIN
               </Button>
             </Box>
 

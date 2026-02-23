@@ -147,6 +147,73 @@ export function getMuiTheme(mode = 'light') {
           },
         },
       },
+      // Date picker & time picker theme (MUI X)
+      MuiPickersDay: {
+        styleOverrides: {
+          root: {
+            borderRadius: 10,
+            '&.Mui-selected': {
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+            },
+            '&.Mui-selected.Mui-focusVisible': {
+              backgroundColor: 'primary.dark',
+            },
+          },
+        },
+      },
+      MuiDateCalendar: {
+        styleOverrides: {
+          root: {
+            '& .MuiPickersCalendarHeader-label': {
+              fontWeight: 600,
+            },
+          },
+        },
+      },
+      MuiPickersCalendarHeader: {
+        styleOverrides: {
+          switchViewButton: {
+            borderRadius: 10,
+          },
+        },
+      },
+      MuiDayCalendar: {
+        styleOverrides: {
+          weekDayLabel: {
+            fontWeight: 600,
+          },
+        },
+      },
+      MuiTimeClock: {
+        styleOverrides: {
+          root: {
+            '& .MuiClockNumber-root': {
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'primary.contrastText',
+              },
+            },
+            '& .MuiClock-pin': {
+              backgroundColor: 'primary.main',
+            },
+            '& .MuiClockPointer-thumb': {
+              backgroundColor: 'primary.main',
+              borderColor: 'primary.main',
+            },
+          },
+        },
+      },
+      MuiPickersArrowSwitcher: {
+        styleOverrides: {
+          button: {
+            borderRadius: 10,
+          },
+        },
+      },
     },
   });
 }
