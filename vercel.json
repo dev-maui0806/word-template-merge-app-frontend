@@ -1,0 +1,12 @@
+{
+  // Ensure client-side React Router routes like /settings work on Vercel.
+  // Any unknown path is rewritten to the SPA entry so Vite/React Router
+  // can handle routing in the browser.
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
+
