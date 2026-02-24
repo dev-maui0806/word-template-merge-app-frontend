@@ -36,7 +36,6 @@ export default function EventTypeToggle() {
       <Box
         sx={{
           display: 'flex',
-          flexWrap: 'wrap',
           gap: 0.75,
           overflowX: { xs: 'auto', md: 'visible' },
           flexWrap: { xs: 'nowrap', md: 'wrap' },
