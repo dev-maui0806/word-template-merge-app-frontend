@@ -11,9 +11,6 @@ import {
   Typography,
   TextField,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -24,7 +21,6 @@ import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import CloseIcon from '@mui/icons-material/Close';
 import { useTheme as useAppTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import CountryToggle from './CountryToggle.jsx';
@@ -284,43 +280,11 @@ export default function Header() {
       {/* Search templates dialog (document history + search) */}
       <DocumentHistoryDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* Contacts dialog */}
-      <Dialog
-        open={contactsOpen}
-        onClose={() => setContactsOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Contacts</Typography>
-          <IconButton aria-label="Close" onClick={() => setContactsOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          <ContactDirectory />
-        </DialogContent>
-      </Dialog>
+      {/* Contacts dialog (managed inside ContactDirectory) */}
+      <ContactDirectory open={contactsOpen} onClose={() => setContactsOpen(false)} />
 
-      {/* Calendar dialog */}
-      <Dialog
-        open={calendarOpen}
-        onClose={() => setCalendarOpen(false)}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Calendar</Typography>
-          <IconButton aria-label="Close" onClick={() => setCalendarOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          <CalendarWidget open onClose={() => setCalendarOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      {/* Calendar dialog (managed inside CalendarWidget) */}
+      <CalendarWidget open={calendarOpen} onClose={() => setCalendarOpen(false)} />
     </AppBar>
   );
 }
