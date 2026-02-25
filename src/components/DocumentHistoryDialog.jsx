@@ -14,8 +14,13 @@ import {
   Toolbar,
   Slider,
   Button,
+  TextField,
+  InputAdornment,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -25,6 +30,36 @@ import { api } from '../api/client.js';
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
+
+const CLAIMANT_SLUGS = new Set([
+  'arrange-venue',
+  'cancel-venue',
+  'arrange-transportation',
+  'cancel-transportation',
+  'arrange-accommodation',
+  'cancel-accommodation',
+  'arrange-notary',
+  'cancel-notary',
+  'arrange-ent-test',
+  'cancel-ent-test',
+  'no-transportation-needed',
+  'contact-claimant',
+]);
+
+const AGENT_SLUGS = new Set([
+  'fa-traveled-to-attend',
+  'fa-booked-flight-ticket',
+  'fa-cancelled-flight-ticket',
+  'fa-traveled-back',
+  'fa-attend',
+]);
+
+function getCategoryFromSlug(actionSlug) {
+  if (!actionSlug) return 'OTHER';
+  if (CLAIMANT_SLUGS.has(actionSlug)) return 'CLAIMANT';
+  if (AGENT_SLUGS.has(actionSlug)) return 'AGENT';
+  return 'OTHER';
+}
 
 export default function DocumentHistoryDialog({ open, onClose }) {
   const [docList, setDocList] = useState([]);
@@ -37,6 +72,8 @@ export default function DocumentHistoryDialog({ open, onClose }) {
   const [previewError, setPreviewError] = useState('');
   const [zoomPercent, setZoomPercent] = useState(100);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('ALL'); // ALL | CLAIMANT | AGENT
+  const [date, setDate] = useState(''); // YYYY-MM-DD
   const docxContainerRef = useRef(null);
 
   const fetchList = useCallback(async () => {
@@ -156,10 +193,20 @@ export default function DocumentHistoryDialog({ open, onClose }) {
 
   const filteredDocs = docList.filter((doc) => {
     const q = search.trim().toLowerCase();
+    const docCategory = getCategoryFromSlug(doc.actionSlug);
+    if (category !== 'ALL' && docCategory !== category) return false;
+    if (date) {
+      const d = doc.createdAt ? dayjs(doc.createdAt).format('YYYY-MM-DD') : '';
+      if (d !== date) return false;
+    }
     if (!q) return true;
     const label = doc.actionSlug?.replace(/-/g, ' ') || 'document';
-    return label.toLowerCase().includes(q) ||
-      (doc.createdAt && dayjs(doc.createdAt).format('D MMM YYYY, HH:mm').toLowerCase().includes(q));
+    const when = doc.createdAt ? dayjs(doc.createdAt).format('D MMM YYYY, HH:mm') : '';
+    return (
+      label.toLowerCase().includes(q) ||
+      when.toLowerCase().includes(q) ||
+      docCategory.toLowerCase().includes(q)
+    );
   });
 
   return (
@@ -172,7 +219,7 @@ export default function DocumentHistoryDialog({ open, onClose }) {
         PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Search templates</Typography>
+          <Typography variant="h6">Search documents</Typography>
           <IconButton aria-label="Close" onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
@@ -188,19 +235,45 @@ export default function DocumentHistoryDialog({ open, onClose }) {
               Search across your generated documents since sign-up.
             </Typography>
           </Box>
-          <Box sx={{ mb: 2 }}>
-            <input
-              type="text"
+
+          <Box sx={{ display: 'flex', gap: 1.25, mb: 2, alignItems: 'center' }}>
+            <TextField
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by template name or date..."
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.2)',
-                fontSize: 14,
+              placeholder="Search by name, category, or date…"
+              size="small"
+              sx={{ flex: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
               }}
+            />
+            <Button onClick={onClose} sx={{ textTransform: 'none' }}>
+              Cancel
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1.25, mb: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Select
+              size="small"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              sx={{ flex: 1, borderRadius: 2 }}
+            >
+              <MenuItem value="ALL">All</MenuItem>
+              <MenuItem value="CLAIMANT">Claimant</MenuItem>
+              <MenuItem value="AGENT">Agent</MenuItem>
+            </Select>
+            <TextField
+              type="date"
+              size="small"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              sx={{ flex: 1 }}
+              InputLabelProps={{ shrink: true }}
             />
           </Box>
           {listLoading ? (
@@ -220,7 +293,11 @@ export default function DocumentHistoryDialog({ open, onClose }) {
                 >
                   <ListItemText
                     primary={doc.actionSlug?.replace(/-/g, ' ') || 'Document'}
-                    secondary={doc.createdAt ? dayjs(doc.createdAt).format('D MMM YYYY, HH:mm') : ''}
+                    secondary={
+                      doc.createdAt
+                        ? `${getCategoryFromSlug(doc.actionSlug)} • ${dayjs(doc.createdAt).format('D MMM YYYY, HH:mm')}`
+                        : getCategoryFromSlug(doc.actionSlug)
+                    }
                     primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
                     secondaryTypographyProps={{ variant: 'caption' }}
                   />

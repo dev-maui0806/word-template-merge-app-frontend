@@ -9,7 +9,6 @@ import {
   Menu,
   MenuItem,
   Typography,
-  TextField,
   InputAdornment,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -28,7 +27,6 @@ import ContactDirectory from './ContactDirectory.jsx';
 import CalendarWidget from './CalendarWidget.jsx';
 import DocumentHistoryDialog from './DocumentHistoryDialog.jsx';
 
-const HEADER_HEIGHT = { xs: 56, sm: 64 };
 const ADMIN_EMAIL = 'yasasrree02@gmail.com';
 
 function isAdmin(user) {
@@ -59,232 +57,370 @@ export default function Header() {
   };
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        backgroundColor: 'background.paper',
-        color: 'text.primary',
-        borderBottom: 1,
-        borderColor: 'divider',
-      }}
-    >
-      <Toolbar
-        sx={{
-          justifyContent: 'space-between',
-          minHeight: HEADER_HEIGHT,
-          maxHeight: HEADER_HEIGHT,
-          maxWidth: 'xl',
-          mx: 'auto',
-          width: '100%',
+    <>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={(theme) => {
+          const isDark = theme.palette.mode === 'dark';
+          return {
+            maxWidth: '1500px',
+            margin: 'auto',
+            backgroundColor: isDark ? theme.palette.background.paper : '#f1f2f6',
+            color: theme.palette.text.primary,
+            borderBottom: 'none',
+          };
         }}
       >
-        <Link
-          to="/"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textDecoration: 'none',
-            color: 'inherit',
+        <Toolbar
+          sx={{
+            justifyContent: 'space-between',
+            minHeight: 64,
+            px: { xs: 1.5, sm: 3 },
+            gap: 2,
           }}
         >
+          {/* Logo Section */}
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 1.5,
-              bgcolor: 'primary.main',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 1,
+              gap: 2,
             }}
           >
-            <DescriptionIcon sx={{ color: 'white', fontSize: 24 }} />
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-              FA DOC
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ lineHeight: 1.1, fontSize: '0.7rem' }}
+            {/* Red Pill Icon */}
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '12px',
+                backgroundColor: '#ff385c',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 6px 16px rgba(255, 56, 92, 0.35)',
+                color: 'white',
+                fontSize: 20,
+                fontWeight: 900,
+              }}
             >
-              Welcome back
-            </Typography>
-          </Box>
-        </Link>
+              <DescriptionIcon sx={{ fontSize: 20 }} />
+            </Box>
 
-        {/* Center search + right controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flex: 1, justifyContent: 'flex-end' }}>
-          {/* Search templates pill */}
+            {/* Logo Text */}
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 30,
+                  fontWeight: 500,
+                  letterSpacing: '-0.75px',
+                  lineHeight: '36px',
+                }}
+              >
+                FA
+                <span style={{ color: '#ff385c', fontWeight: 500 }}> DOC</span>
+                PRO
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '1.4px',
+                  color: '#9ca3af',
+                  marginTop: '4px',
+                }}
+              >
+                APPLICATION LAYER V5.0
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Center - Search & Controls */}
           <Box
             sx={{
-              flex: { xs: 0, sm: 1 },
-              maxWidth: 420,
-              mx: { xs: 0.5, sm: 2 },
-              display: { xs: 'none', sm: 'block' },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flex: 1,
+              justifyContent: 'flex-end',
             }}
           >
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search templates..."
+            {/* Search Pill */}
+            <Box
               onClick={() => setSearchOpen(true)}
-              InputProps={{
-                readOnly: true,
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18 }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 999,
-                  bgcolor: 'background.default',
-                  px: 1,
-                },
-              }}
-            />
-          </Box>
-
-         
-
-          {/* Contacts & Calendar buttons, matching pill style */}
-          {isAuthenticated && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 1 }}>
-
-               {/* Dark / light toggle as sun/moon icon */}
-           <IconButton
-            size="small"
-            aria-label="Toggle dark mode"
-            onClick={toggleTheme}
-            sx={{
-              borderRadius: 999,
-              bgcolor: 'action.hover',
-              '&:hover': { bgcolor: 'action.selected' },
-            }}
-          >
-            {dark ? (
-              <DarkModeIcon sx={{ fontSize: 18 }} />
-            ) : (
-              <LightModeIcon sx={{ fontSize: 18 }} />
-            )}
-          </IconButton>
-
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ContactPhoneIcon sx={{ fontSize: 18 }} />}
-                onClick={() => setContactsOpen(true)}
-                sx={{
-                  borderRadius: 999,
-                  textTransform: 'none',
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.8rem',
-                }}
-              >
-                Contacts
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<CalendarMonthIcon sx={{ fontSize: 18 }} />}
-                onClick={() => setCalendarOpen(true)}
-                sx={{
-                  borderRadius: 999,
-                  textTransform: 'none',
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.8rem',
-                }}
-              >
-                Calendar
-              </Button>
-            </Box>
-          )}
-
-          
-          <CountryToggle />
-          {isAuthenticated && user ? (
-            <>
-              <IconButton
-                onClick={handleMenu}
-                aria-label="Profile"
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 2,
-                  bgcolor: 'action.hover',
-                  '&:hover': { bgcolor: 'action.selected' },
-                }}
-              >
-                <PersonOutlineIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                slotProps={{
-                  paper: {
-                    sx: { mt: 1.5, minWidth: 160, borderRadius: 2, boxShadow: 2 },
+              sx={(theme) => {
+                const isDark = theme.palette.mode === 'dark';
+                return {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  padding: '7px 12px',
+                  backgroundColor: isDark ? theme.palette.background.paper : '#fff',
+                  border: `1px solid ${
+                    isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                  }`,
+                  borderRadius: '50%',
+                  boxShadow: isDark
+                    ? '0 8px 20px rgba(0,0,0,0.55)'
+                    : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                  cursor: 'pointer',
+                  transition: 'width 0.35s ease, padding 0.35s ease, background-color 0.2s ease',
+                  width: 44,
+                  height: 44,
+                  '&:hover': {
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.04)'
+                      : '#f9fafb',
                   },
-                }}
-              >
-                {isAdmin(user) && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin"
-                    onClick={handleClose}
-                  >
-                    <AdminPanelSettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    Admin
-                  </MenuItem>
-                )}
-                <MenuItem onClick={handleSettings}>
-                  <PersonOutlineIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  Settings
-                </MenuItem>
-                <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                  <LockIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  Logout
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <IconButton
-              component={Link}
-              to="/auth/login"
-              aria-label="Login"
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
+                };
               }}
             >
-              <PersonOutlineIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          )}
-        </Box>
-      </Toolbar>
+              <SearchIcon
+                sx={(theme) => ({
+                  fontSize: 16,
+                  color: theme.palette.text.secondary,
+                  flexShrink: 0,
+                })}
+              />
+            </Box>
 
-      {/* Search templates dialog (document history + search) */}
+           
+
+            {/* Dark/Light Toggle */}
+            <IconButton
+              size="small"
+              onClick={toggleTheme}
+              sx={(theme) => {
+                const isDark = theme.palette.mode === 'dark';
+                return {
+                  width: 41,
+                  height: 41,
+                  borderRadius: '15px',
+                  backgroundColor: isDark ? theme.palette.background.paper : '#fff',
+                  border: `1px solid ${
+                    isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                  }`,
+                  boxShadow: isDark
+                    ? '0 8px 20px rgba(0,0,0,0.55)'
+                    : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                  color: theme.palette.text.secondary,
+                  '&:hover': {
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.04)'
+                      : '#f9fafb',
+                  },
+                };
+              }}
+            >
+              {dark ? <DarkModeIcon sx={{ fontSize: 16 }} /> : <LightModeIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
+
+            {/* Contacts Button */}
+            {isAuthenticated && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setContactsOpen(true)}
+                sx={(theme) => {
+                  const isDark = theme.palette.mode === 'dark';
+                  return {
+                    borderRadius: '20px',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 0.8,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    border: `1px solid ${
+                      isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                    }`,
+                    color: theme.palette.text.primary,
+                    backgroundColor: isDark
+                      ? theme.palette.background.paper
+                      : '#fff',
+                    boxShadow: isDark
+                      ? '0 8px 20px rgba(0,0,0,0.55)'
+                      : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    '&:hover': {
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : '#f9fafb',
+                    },
+                  };
+                }}
+              >
+                <ContactPhoneIcon sx={{ mr: 0.5, fontSize: 14 }} />
+                Contacts
+              </Button>
+            )}
+
+            {/* Calendar Button */}
+            {isAuthenticated && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCalendarOpen(true)}
+                sx={(theme) => {
+                  const isDark = theme.palette.mode === 'dark';
+                  return {
+                    borderRadius: '20px',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 0.8,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    border: `1px solid ${
+                      isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                    }`,
+                    color: theme.palette.text.primary,
+                    backgroundColor: isDark
+                      ? theme.palette.background.paper
+                      : '#fff',
+                    boxShadow: isDark
+                      ? '0 8px 20px rgba(0,0,0,0.55)'
+                      : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    '&:hover': {
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : '#f9fafb',
+                    },
+                  };
+                }}
+              >
+                <CalendarMonthIcon sx={{ mr: 0.5, fontSize: 14 }} />
+                Calendar
+              </Button>
+            )}
+
+            {/* Country Toggle */}
+            <CountryToggle />
+
+            {/* User Profile */}
+            {isAuthenticated && user ? (
+              <>
+                <Box
+                  onClick={handleMenu}
+                  sx={(theme) => {
+                    const isDark = theme.palette.mode === 'dark';
+                    return {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      padding: '4.5px',
+                      backgroundColor: isDark
+                        ? theme.palette.background.paper
+                        : '#fff',
+                      border: `1px solid ${
+                        isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                      }`,
+                      borderRadius: '50px',
+                      boxShadow: isDark
+                        ? '0 8px 20px rgba(0,0,0,0.55)'
+                        : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: isDark
+                          ? 'rgba(255,255,255,0.04)'
+                          : '#f9fafb',
+                      },
+                    };
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      backgroundColor: '#000',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {user.name?.[0]?.toUpperCase() || 'U'}
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: 'text.primary',
+                      maxWidth: 160,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user.name || user.email}
+                  </Typography>
+                </Box>
+
+                <Menu
+                  anchorEl={anchorEl}
+                  open={open}
+                  onClose={handleClose}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        mt: 1.5,
+                        minWidth: 180,
+                        borderRadius: 1.5,
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                        border: '1px solid #e5e7eb',
+                      },
+                    },
+                  }}
+                >
+                  {isAdmin(user) && (
+                    <MenuItem component={Link} to="/admin" onClick={handleClose}>
+                      <AdminPanelSettingsIcon sx={{ mr: 1.5, fontSize: 14 }} />
+                      Admin
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleSettings}>
+                    <PersonOutlineIcon sx={{ mr: 1.5, fontSize: 14 }} />
+                    Settings
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout} sx={{ color: '#ef4444' }}>
+                    <LockIcon sx={{ mr: 1.5, fontSize: 14 }} />
+                    Logout
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <IconButton
+                component={Link}
+                to="/auth/login"
+                sx={{
+                  width: 41,
+                  height: 41,
+                  borderRadius: '15px',
+                  backgroundColor: '#ff385c',
+                  color: '#fff',
+                  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+                  '&:hover': { backgroundColor: '#ff1f47' },
+                }}
+              >
+                <PersonOutlineIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            )}
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Document history (generated DOCX) */}
       <DocumentHistoryDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* Contacts dialog (managed inside ContactDirectory) */}
+      {/* Contacts Dialog */}
       <ContactDirectory open={contactsOpen} onClose={() => setContactsOpen(false)} />
 
-      {/* Calendar dialog (managed inside CalendarWidget) */}
+      {/* Calendar Dialog */}
       <CalendarWidget open={calendarOpen} onClose={() => setCalendarOpen(false)} />
-    </AppBar>
+    </>
   );
 }

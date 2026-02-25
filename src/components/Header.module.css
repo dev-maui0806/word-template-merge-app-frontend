@@ -1,159 +1,34 @@
+/* Header styles - Most styling now done via MUI sx prop */
+/* Kept for reference and any legacy usage */
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  transition: background var(--transition), border-color var(--transition);
+  background: #f1f2f6;
+  border-bottom: none;
+  transition: background 0.3s ease;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   text-decoration: none;
   color: inherit;
 }
 
-.brand:hover {
-  text-decoration: none;
-}
-
-.logo svg {
-  display: block;
-}
-
 .brandName {
-  display: block;
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--accent);
+  font-weight: 500;
+  font-size: 1.875rem;
+  letter-spacing: -0.75px;
 }
 
 .brandSub {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.iconBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  border-radius: 8px;
-  transition: background var(--transition);
-}
-
-.iconBtn:hover {
-  background: var(--bg-input);
-}
-
-.loginBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 999px;
+  font-size: 0.6875rem;
+  color: #9ca3af;
   font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: background var(--transition);
-}
-
-.loginBtn:hover {
-  background: var(--accent-hover);
-  color: white;
-  text-decoration: none;
-}
-
-.userMenu {
-  position: relative;
-}
-
-.userButton {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.9rem;
-  background: var(--bg-input);
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.userName {
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.userDropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.25rem);
-  min-width: 180px;
-  padding: 0.5rem 0;
-  background: var(--bg-card);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity var(--transition), transform var(--transition);
-  z-index: 10;
-}
-
-.userMenu:hover .userDropdown {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.menuItem {
-  width: 100%;
-  padding: 0.5rem 1rem;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.menuItem:hover {
-  background: var(--bg-input);
+  letter-spacing: 1.4px;
+  margin-top: 4px;
 }

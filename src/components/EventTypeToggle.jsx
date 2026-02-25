@@ -2,124 +2,185 @@ import { useApp } from '../context/AppContext.jsx';
 import { Box, Typography } from '@mui/material';
 
 const PRIMARY_OPTIONS = [
-  'Deposition',
-  'IME',
-  'VOC',
-  'Vocational Assessment',
-  'Unsworn Interview',
-  'ENT Test',
+  { label: 'Deposition', icon: null },
+  { label: 'IME', icon: '🟢' },
+  { label: 'VOC', icon: null },
+  { label: 'Unsworn Interview', icon: null },
+  { label: 'ENT Test', icon: null },
 ];
 
-const IME_SUB_OPTIONS = ['Psychological IME', 'ENT IME', 'Neurological IME'];
+const IME_SUB_OPTIONS = [
+  { label: 'Psychological IME', color: '#8012d1', bgColor: 'rgba(250, 245, 255, 1)' },
+  { label: 'ENT IME', color: '#374151', bgColor: 'rgb(255, 255, 255)' },
+  { label: 'Neurological IME', color: '#374151', bgColor: 'rgb(255, 255, 255)' },
+];
 
 export default function EventTypeToggle() {
   const { eventType, imeSubType, setEventType, setImeSubType } = useApp();
   const showImeSub = eventType === 'IME';
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.5,
-        minHeight: showImeSub ? undefined : 60,
-      }}
-    >
-      {/* <Typography
-        variant="caption"
-        color="text.secondary"
-        fontWeight={600}
-        sx={{ width:"max-content", letterSpacing: '0.08em', padding:"2px 10px", borderBlockEnd: '2px solid rgb(192, 53, 53)' }}
-      >
-        SELECT EVENT TYPE
-      </Typography> */}
-      <Box
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* SELECT EVENT TYPE Label */}
+      <Typography
         sx={{
-          display: 'flex',
-          gap: 0.75,
-          overflowX: { xs: 'auto', md: 'visible' },
-          flexWrap: { xs: 'nowrap', md: 'wrap' },
-          pb: { xs: 0.5, md: 0 },
-          mx: { xs: -0.5, md: 0 },
-          '&::-webkit-scrollbar': { height: 4 },
-          '&::-webkit-scrollbar-thumb': { borderRadius: 2, bgcolor: 'divider' },
+          fontSize: '18px',
+          fontWeight: 700,
+          color: 'text.secondary',
+          letterSpacing: '3.6px',
+          lineHeight: '27px',
+          textTransform: 'uppercase',
+          textAlign: 'right',
+        }}
+      >
+        Select Event Type
+      </Typography>
+
+      {/* Primary Options Container */}
+      <Box
+        sx={(theme) => {
+          const isDark = theme.palette.mode === 'dark';
+          return {
+            display: 'flex',
+            gap: '6px',
+            flexWrap: 'wrap',
+            backgroundColor: isDark ? 'rgba(24,24,27,1)' : '#f2f3f5',
+            border: `1px solid ${
+              isDark ? 'rgba(255,255,255,0.14)' : '#e2e4e8'
+            }`,
+            borderRadius: '50px',
+            padding: '6px',
+            boxShadow: isDark
+              ? 'inset 0 1px 2px rgba(0,0,0,0.7)'
+              : 'inset 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 2px 4px rgba(0, 0, 0, 0.02)',
+            transition: 'all 0.2s ease',
+          };
         }}
       >
         {PRIMARY_OPTIONS.map((opt) => {
-          const active = eventType === opt;
+          const active = eventType === opt.label;
           return (
             <Box
-              key={opt}
+              key={opt.label}
               component="button"
-              type="button"
-              onClick={() => setEventType(opt)}
-              sx={{
-                flexShrink: 0,
-                px: 2,
-                py: 1,
-                borderRadius: '999px',
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? 'primary.main' : 'transparent',
-                color: active ? 'primary.contrastText' : 'text.primary',
-                fontWeight: 500,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: active ? 'scale(1.02)' : 'scale(1)',
-                boxShadow: active ? 2 : 0,
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: active ? 'primary.dark' : 'action.hover',
-                  color: active ? 'primary.contrastText' : 'primary.main',
-                  transform: 'scale(1.02)',
-                  boxShadow: 2,
-                },
+              onClick={() => setEventType(opt.label)}
+              sx={(theme) => {
+                const isDark = theme.palette.mode === 'dark';
+                return {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  px: '21px',
+                  py: '8px',
+                  borderRadius: '50px',
+                  border: 'none',
+                  backgroundColor: active
+                    ? isDark
+                      ? 'rgba(15,23,42,1)'
+                      : 'rgb(255, 255, 255)'
+                    : 'transparent',
+                  color: theme.palette.text.primary,
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  lineHeight: '21px',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease-in',
+                  fontFamily: 'system-ui',
+                  fontStyle: 'normal',
+                  '&:hover': {
+                    backgroundColor: active
+                      ? undefined
+                      : isDark
+                      ? 'rgba(255,255,255,0.04)'
+                      : 'rgba(255,255,255,0.8)',
+                  },
+                };
               }}
             >
-              {opt}
+              {opt.icon && (
+                <Box
+                  sx={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#22c55e',
+                    marginRight: '0px',
+                  }}
+                />
+              )}
+              <span>{opt.label}</span>
             </Box>
           );
         })}
       </Box>
+
+      {/* IME Sub-options Container */}
       {showImeSub && (
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 0.75,
+            gap: '6px',
             flexWrap: 'wrap',
-            animation: 'fadeIn 0.25s ease-out',
+            marginTop: '14px',
+            transition: 'all 0.7s ease',
           }}
         >
           {IME_SUB_OPTIONS.map((opt) => {
-            const active = imeSubType === opt;
+            const active = imeSubType === opt.label;
             return (
               <Box
-                key={opt}
+                key={opt.label}
                 component="button"
                 type="button"
-                onClick={() => setImeSubType(opt)}
-                sx={{
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: '999px',
-                  border: '1px solid',
-                  borderColor: active ? 'primary.main' : 'divider',
-                  bgcolor: active ? 'primary.main' : 'transparent',
-                  color: active ? 'primary.contrastText' : 'text.secondary',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: active ? 'primary.dark' : 'action.hover',
-                    color: active ? 'primary.contrastText' : 'primary.main',
-                  },
+                onClick={() => setImeSubType(opt.label)}
+                sx={(theme) => {
+                  const isDark = theme.palette.mode === 'dark';
+                  const activeBgLight =
+                    opt.color === '#8012d1'
+                      ? 'rgba(240, 220, 255, 1)'
+                      : 'rgba(245, 245, 245, 1)';
+                  return {
+                    px: '16px',
+                    py: '7px',
+                    borderRadius: '999px',
+                    border: `1px solid ${
+                      active
+                        ? theme.palette.primary.main
+                        : isDark
+                        ? 'rgba(255,255,255,0.18)'
+                        : '#e5e7eb'
+                    }`,
+                    backgroundColor: active
+                      ? isDark
+                        ? 'rgba(255,255,255,0.06)'
+                        : activeBgLight
+                      : isDark
+                      ? 'transparent'
+                      : opt.bgColor,
+                    color: active
+                      ? opt.color === '#8012d1'
+                        ? '#8012d1'
+                        : theme.palette.text.primary
+                      : isDark
+                      ? theme.palette.text.secondary
+                      : opt.color,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    lineHeight: '18px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: active
+                        ? undefined
+                        : isDark
+                        ? 'rgba(255,255,255,0.06)'
+                        : activeBgLight,
+                    },
+                  };
                 }}
               >
-                {opt}
+                {opt.label}
               </Box>
             );
           })}

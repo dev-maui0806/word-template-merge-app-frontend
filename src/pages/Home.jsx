@@ -42,109 +42,116 @@ export default function Home() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 4, bgcolor: 'background.default' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        pb: 4,
+        // Use theme background so dark mode works correctly
+        bgcolor: 'background.default',
+      }}
+    >
       <Header />
       <Container
         maxWidth="xl"
         sx={{
-          px: { xs: 2, sm: 2.5, md: 3 },
+          px: { xs: 1.5, sm: 2.5, md: 3 },
           pt: 3,
         }}
       >
-        {/* Hero: date, greeting + inline select event type */}
-        <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Top row: date + subscription badge */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 2,
-            }}
-          >
+        {/* HERO SECTION: Two Column Layout */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 4,
+            mb: 5,
+          }}
+        >
+          {/* LEFT COLUMN: Greeting + Description */}
+          <Box sx={{ flex: 1 }}>
+            {/* Date Badge */}
             <Box
-              sx={{
+              sx={(theme) => ({
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 1,
-                px: 2,
-                py: 0.5,
-                borderRadius: 999,
-                bgcolor: 'rgba(248, 113, 113, 0.12)', // light red pill
+                gap: '5.25px',
+                px: '8px',
+                py: '3px',
+                borderRadius: '8px',
+                // Slightly stronger pill in dark mode, lighter in light mode
+                backgroundColor:
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(248,113,113,0.22)'
+                    : 'rgba(248,113,113,0.12)',
+                color: theme.palette.error.main,
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.8px',
+                lineHeight: '15px',
+                marginBottom: '5px',
+              })}
+            >
+              <CalendarMonthIcon sx={{ fontSize: 10 }} />
+              {dayjs().format('dddd, D MMMM YYYY')}
+            </Box>
+
+            {/* Greeting */}
+            <Typography
+              sx={{
+                fontSize: '52px',
+                fontWeight: 700,
+                lineHeight: '59.8px',
+                // Adapt to theme text color (light/dark)
+                color: 'text.primary',
+                marginBottom: '16px',
               }}
             >
-              <CalendarMonthIcon sx={{ fontSize: 16, color: 'error.main' }} />
-              <Typography
-                variant="body2"
-                sx={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: '0.8rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.16em',
-                  color: 'error.main',
+              {greeting}
+              <br />
+              <span
+                style={{
+                  backgroundClip: 'text',
+                  backgroundImage: 'linear-gradient(90deg, rgb(249, 115, 22), rgb(255, 56, 92))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 700,
                 }}
               >
-                {dayjs().format('dddd, D MMMM YYYY')}
-              </Typography>
-            </Box>
-            <SubscriptionBadge />
-          </Box>
-
-          {/* Greeting + inline event type */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              alignItems: { xs: 'flex-start', md: 'flex-end', lg: 'center', xl:"center" },
-              justifyContent: 'space-between',
-              
-              gap: 3,
-            }}
-          >
-            <Box>
-              <Typography
-                variant="h1"
-                sx={{ fontWeight: 700, letterSpacing: '0.02em', fontSize: '2.5rem' }}
-              >
-                {greeting}
-              </Typography>
-              <Typography
-                variant="h2"
-                sx={{ fontWeight: 700, letterSpacing: '0.02em', color: 'primary.main',  fontSize: '2.5rem' }}
-              >
                 {firstName}
-              </Typography>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{ mt: 1.5, maxWidth: 520, lineHeight: 1.7 }}
-              >
-                Ready to draft another masterpiece? Select a module to begin.
-              </Typography>
-              {trialMessage && (
-                <Alert
-                  severity={docCount >= 3 ? 'warning' : 'info'}
-                  sx={{ maxWidth: 520, mt: 2 }}
-                >
-                  {trialMessage}
-                </Alert>
-              )}
-            </Box>
+              </span>
+            </Typography>
 
-            {/* Inline Select Event Type block */}
-            <Box
+            {/* Subtitle */}
+            <Typography
               sx={{
-                minWidth: { md: 420 },
-                mt: { xs: 3, md: 0 },
+                fontSize: '15px',
+                fontWeight: 500,
+                color: 'text.secondary',
+                marginBottom: '16px',
+                lineHeight: '24px',
               }}
             >
-              <EventTypeToggle />
-            </Box>
+              Ready to draft another masterpiece?
+              <br />
+              Select a module to begin.
+            </Typography>
+
+            {/* Trial Message */}
+            {trialMessage && (
+              <Alert severity={docCount >= 3 ? 'warning' : 'info'} sx={{ maxWidth: 520 }}>
+                {trialMessage}
+              </Alert>
+            )}
+          </Box>
+
+          {/* RIGHT COLUMN: Event Type Toggle */}
+          <Box sx={{ minWidth: { md: 420 } }}>
+            <EventTypeToggle />
           </Box>
         </Box>
 
-        {/* 3. PRIMARY WIDGETS SECTION */}
+        {/* PRIMARY WIDGETS SECTION */}
         <Box
           sx={{
             display: 'grid',
