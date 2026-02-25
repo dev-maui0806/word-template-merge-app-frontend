@@ -105,6 +105,7 @@ export default function Register() {
 
     setLoading(true);
     try {
+      // 1) Create the account with email + password
       const res = await api('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
@@ -118,11 +119,29 @@ export default function Register() {
       if (!res.ok) {
         throw new Error(data.error || 'Registration failed');
       }
-      if (!data.accessToken || !data.refreshToken || !data.user) {
-        throw new Error('Unexpected response from server');
+
+      // 2) Send OTP to verify the email and complete sign‑in
+      const otpRes = await api('/auth/otp/email/send', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: normalizedEmail,
+          deviceId,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      if (!otpRes.ok) {
+        const otpBody = await otpRes.json().catch(() => ({}));
+        throw new Error(otpBody.error || 'Registration succeeded, but failed to send OTP. Please try signing in with OTP.');
       }
-      persist(data.accessToken, data.refreshToken, data.user);
-      navigate('/');
+
+      // 3) Redirect to login with prefilled email and OTP step
+      navigate('/auth/login', {
+        state: {
+          prefillEmail: normalizedEmail,
+          showOtpAfterRegister: true,
+        },
+        replace: true,
+      });
     } catch (err) {
       setError(err.message || 'Registration failed');
     } finally {

@@ -153,6 +153,17 @@ export default function Login() {
     }
   }, []);
 
+  // If coming from the Register page, prefill email and show OTP verification step.
+  useEffect(() => {
+    const state = location.state;
+    if (state?.prefillEmail && state?.showOtpAfterRegister) {
+      setMethod('email');
+      setEmail(state.prefillEmail);
+      setStep('verify');
+      setSuccess('We have sent an OTP to your email. Please enter it below to complete registration.');
+    }
+  }, [location.state]);
+
   // Countdown for PIN lockout (when PIN_LOCKED)
   useEffect(() => {
     if (pinLockSeconds <= 0) return;
