@@ -42,7 +42,9 @@ const CLAIMANT_SLUGS = new Set([
   'cancel-notary',
   'arrange-ent-test',
   'cancel-ent-test',
-  'no-transportation-needed',
+  'contact-claimant-required-transportation',
+  'contact-claimant-not-required-transportation',
+  'contact-claimant-required-both',
   'contact-claimant',
 ]);
 

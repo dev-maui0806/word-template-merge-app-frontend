@@ -42,14 +42,14 @@ export default function Home() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        pb: 4,
-        // Use theme background so dark mode works correctly
-        bgcolor: 'background.default',
-      }}
-    >
+  <Box
+    sx={(theme) => ({
+      minHeight: '100vh',
+      pb: 4,
+      // Use theme background so dark mode applies correctly on the dashboard
+      bgcolor: theme.palette.background.default,
+    })}
+  >
       <Header />
       <Container
         maxWidth="xl"

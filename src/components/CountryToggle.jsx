@@ -79,21 +79,30 @@ export default function CountryToggle() {
           )
         }
         endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
-        sx={{
-          borderRadius: '20px',
-          textTransform: 'none',
-          px: 2,
-          py: 0.8,
-          fontSize: '12px',
-          fontWeight: 700,
-          border: '1px solid #e5e7eb',
-          color: '#111827',
-          backgroundColor: '#fff',
-          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
-          display: { xs: 'none', sm: 'inline-flex' },
-          '&:hover': {
-            backgroundColor: '#f9fafb',
-          },
+        sx={(theme) => {
+          const isDark = theme.palette.mode === 'dark';
+          return {
+            borderRadius: '20px',
+            textTransform: 'none',
+            px: 2,
+            py: 0.8,
+            fontSize: '12px',
+            fontWeight: 700,
+            border: `1px solid ${
+              isDark ? 'rgba(255,255,255,0.18)' : '#e5e7eb'
+            }`,
+            color: theme.palette.text.primary,
+            backgroundColor: isDark ? theme.palette.background.paper : '#fff',
+            boxShadow: isDark
+              ? '0 8px 20px rgba(0,0,0,0.55)'
+              : '0 6px 16px rgba(0, 0, 0, 0.08)',
+            display: { xs: 'none', sm: 'inline-flex' },
+            '&:hover': {
+              backgroundColor: isDark
+                ? 'rgba(255,255,255,0.04)'
+                : '#f9fafb',
+            },
+          };
         }}
       >
         {current?.label ?? 'Select country'}

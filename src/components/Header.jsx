@@ -88,8 +88,11 @@ export default function Header() {
               gap: 2,
             }}
           >
-            {/* Red Pill Icon */}
+            {/* Red Pill Icon – acts as a Home/Dashboard button */}
             <Box
+              onClick={() => navigate('/')}
+              role="button"
+              aria-label="Go to dashboard"
               sx={{
                 width: 44,
                 height: 44,
@@ -102,6 +105,10 @@ export default function Header() {
                 color: 'white',
                 fontSize: 20,
                 fontWeight: 900,
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0 8px 20px rgba(255, 56, 92, 0.5)',
+                },
               }}
             >
               <DescriptionIcon sx={{ fontSize: 20 }} />

@@ -31,7 +31,7 @@ export default function NotesWidget() {
   return (
     <Card
       sx={{
-        borderRadius: 3,
+        borderRadius: 2,
         boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
         border: '1px solid',
         borderColor: 'divider',

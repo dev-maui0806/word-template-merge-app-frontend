@@ -1,18 +1,20 @@
 import { useApp } from '../context/AppContext.jsx';
 import { Box, Typography } from '@mui/material';
 
+// Primary event types – each gets its own dot color when selected.
 const PRIMARY_OPTIONS = [
-  { label: 'Deposition', icon: null },
-  { label: 'IME', icon: '🟢' },
-  { label: 'VOC', icon: null },
-  { label: 'Unsworn Interview', icon: null },
-  { label: 'ENT Test', icon: null },
+  { label: 'Deposition', dotColor: '#22c55e' }, // green
+  { label: 'IME', dotColor: '#a855f7' }, // purple
+  { label: 'VOC', dotColor: '#3b82f6' }, // blue
+  { label: 'Unsworn Interview', dotColor: '#f97316' }, // orange
+  { label: 'ENT Test', dotColor: '#ec4899' }, // pink
 ];
 
+// IME sub-types – styling is handled purely in the sx callback.
 const IME_SUB_OPTIONS = [
-  { label: 'Psychological IME', color: '#8012d1', bgColor: 'rgba(250, 245, 255, 1)' },
-  { label: 'ENT IME', color: '#374151', bgColor: 'rgb(255, 255, 255)' },
-  { label: 'Neurological IME', color: '#374151', bgColor: 'rgb(255, 255, 255)' },
+  { label: 'Psychological IME' },
+  { label: 'ENT IME' },
+  { label: 'Neurological IME' },
 ];
 
 export default function EventTypeToggle() {
@@ -63,6 +65,7 @@ export default function EventTypeToggle() {
             <Box
               key={opt.label}
               component="button"
+              type="button"
               onClick={() => setEventType(opt.label)}
               sx={(theme) => {
                 const isDark = theme.palette.mode === 'dark';
@@ -97,15 +100,14 @@ export default function EventTypeToggle() {
                 };
               }}
             >
-              {opt.icon && (
+              {active && opt.dotColor && (
                 <Box
                   sx={{
                     display: 'inline-block',
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: '#22c55e',
-                    marginRight: '0px',
+                    backgroundColor: opt.dotColor,
                   }}
                 />
               )}
@@ -128,56 +130,30 @@ export default function EventTypeToggle() {
         >
           {IME_SUB_OPTIONS.map((opt) => {
             const active = imeSubType === opt.label;
+            const purple = '#7c3aed';
+            const activeBg = 'rgba(124, 58, 237, 0.12)'; // light purple tint
+
             return (
               <Box
                 key={opt.label}
                 component="button"
                 type="button"
                 onClick={() => setImeSubType(opt.label)}
-                sx={(theme) => {
-                  const isDark = theme.palette.mode === 'dark';
-                  const activeBgLight =
-                    opt.color === '#8012d1'
-                      ? 'rgba(240, 220, 255, 1)'
-                      : 'rgba(245, 245, 245, 1)';
-                  return {
-                    px: '16px',
-                    py: '7px',
-                    borderRadius: '999px',
-                    border: `1px solid ${
-                      active
-                        ? theme.palette.primary.main
-                        : isDark
-                        ? 'rgba(255,255,255,0.18)'
-                        : '#e5e7eb'
-                    }`,
-                    backgroundColor: active
-                      ? isDark
-                        ? 'rgba(255,255,255,0.06)'
-                        : activeBgLight
-                      : isDark
-                      ? 'transparent'
-                      : opt.bgColor,
-                    color: active
-                      ? opt.color === '#8012d1'
-                        ? '#8012d1'
-                        : theme.palette.text.primary
-                      : isDark
-                      ? theme.palette.text.secondary
-                      : opt.color,
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    lineHeight: '18px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      backgroundColor: active
-                        ? undefined
-                        : isDark
-                        ? 'rgba(255,255,255,0.06)'
-                        : activeBgLight,
-                    },
-                  };
+                sx={{
+                  px: '16px',
+                  py: '7px',
+                  borderRadius: '999px',
+                  border: `1px solid ${active ? purple : '#e5e7eb'}`,
+                  backgroundColor: active ? activeBg : '#ffffff',
+                  color: active ? purple : '#000000',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  lineHeight: '18px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: active ? activeBg : activeBg,
+                  },
                 }}
               >
                 {opt.label}

@@ -279,6 +279,22 @@ function ProfileAndPinSection() {
   const [pinMessage, setPinMessage] = useState('');
   const [pinError, setPinError] = useState('');
 
+  // Ensure we have the latest profile from the server when opening Settings
+  useEffect(() => {
+    refreshUser?.();
+  }, [refreshUser]);
+
+  // When the authenticated user object loads or changes, populate the form fields.
+  // This fixes the case where the component mounted before user data was available,
+  // leaving the inputs permanently blank until the user types manually.
+  useEffect(() => {
+    if (!user) return;
+
+    setName((prev) => prev || user.name || user.email?.split('@')[0] || '');
+    setEmail((prev) => prev || user.email || '');
+    setMobile((prev) => prev || user.mobile || '');
+  }, [user]);
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setProfileSuccess('');
