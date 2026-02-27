@@ -1,9 +1,16 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
   Typography,
   Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useApp } from '../context/AppContext.jsx';
@@ -19,11 +26,19 @@ const CLAIMANT_ITEMS = [
   { label: 'Cancel Ent Test', path: '/form/cancel-ent-test' },
   { label: 'Arrange Accommodation', path: '/form/arrange-accommodation' },
   { label: 'Cancel Accommodation', path: '/form/cancel-accommodation' },
-  { label: 'No Transportation Needed', path: '/form/no-transportation-needed', fullWidth: true },
+  { label: 'Contact Claimant', path: null, isContactClaimant: true, fullWidth: true },
+];
+
+const CONTACT_CLAIMANT_OPTIONS = [
+  { label: 'Required Transportation', path: '/form/contact-claimant-required-transportation' },
+  { label: 'NOT Required Transportation', path: '/form/contact-claimant-not-required-transportation' },
+  { label: 'Required both accommodation and Transportation', path: '/form/contact-claimant-required-both' },
 ];
 
 export default function ClaimantWidget() {
   const { eventType } = useApp();
+  const navigate = useNavigate();
+  const [contactClaimantOpen, setContactClaimantOpen] = useState(false);
 
   const handleClick = (e, item) => {
     if (item.requiresEventType && !eventType) {
@@ -31,9 +46,19 @@ export default function ClaimantWidget() {
       window.alert('Please select an Event Type before continuing.');
       return;
     }
+    if (item.isContactClaimant) {
+      e.preventDefault();
+      setContactClaimantOpen(true);
+    }
+  };
+
+  const handleContactClaimantOption = (path) => {
+    setContactClaimantOpen(false);
+    navigate(path);
   };
 
   return (
+    <>
     <Card
       sx={(theme) => {
         const isDark = theme.palette.mode === 'dark';
@@ -87,12 +112,14 @@ export default function ClaimantWidget() {
               }}
             >
               <Box
-                component={Link}
-                to={item.path}
+                component={item.path ? Link : 'button'}
+                to={item.path || undefined}
+                type={item.path ? undefined : 'button'}
                 onClick={(e) => handleClick(e, item)}
                 sx={(theme) => {
                   const isDark = theme.palette.mode === 'dark';
                   return {
+                    ...(item.isContactClaimant && { outline: 'none', font: 'inherit', textAlign: 'left' }),
                     alignItems: 'center',
                     backgroundColor: isDark
                       ? 'rgba(255,255,255,0.04)'
@@ -141,15 +168,7 @@ export default function ClaimantWidget() {
                 >
                   {item.label}
                 </Typography>
-                <Box
-                  sx={{
-                    color: 'rgb(55, 65, 81)',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    transitionDuration: '0.3s',
-                  }}
-                >
+                <Box sx={{ color: 'inherit', cursor: 'pointer', fontSize: '14px', fontWeight: 500, transitionDuration: '0.3s' }}>
                   <ChevronRightIcon sx={{ fontSize: '14px' }} />
                 </Box>
               </Box>
@@ -158,5 +177,41 @@ export default function ClaimantWidget() {
         </Box>
       </CardContent>
     </Card>
+
+    <Dialog open={contactClaimantOpen} onClose={() => setContactClaimantOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Contact Claimant – Claimant Replied</DialogTitle>
+      <DialogContent dividers>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Choose the option that applies:
+        </Typography>
+        <List disablePadding>
+          {CONTACT_CLAIMANT_OPTIONS.map((opt) => (
+            <ListItemButton
+              key={opt.path}
+              onClick={() => handleContactClaimantOption(opt.path)}
+              sx={(theme) => {
+                const isDark = theme.palette.mode === 'dark';
+                return {
+                  borderRadius: '12px',
+                  mb: 0.5,
+                  justifyContent: 'space-between',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgb(243, 244, 246)',
+                  border: '1px solid',
+                  borderColor: isDark ? 'rgba(255,255,255,0.12)' : '#ffffff',
+                  '&:hover': {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#ffffff',
+                    borderColor: 'rgba(255, 56, 92, 0.3)',
+                  },
+                };
+              }}
+            >
+              <ListItemText primary={opt.label} primaryTypographyProps={{ fontWeight: 500 }} />
+              <ChevronRightIcon sx={{ fontSize: 14, opacity: 0.7 }} />
+            </ListItemButton>
+          ))}
+        </List>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 }
