@@ -154,7 +154,7 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
           />
           <CloudUploadIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
           <Box component="span" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-            {label} (PNG, JPEG, GIF, WebP – max 5MB)
+            {label} (PNG, JPEG, GIF, WebP – max 25MB)
           </Box>
         </Box>
         {hasImage && (

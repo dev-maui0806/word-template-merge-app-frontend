@@ -18,6 +18,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import SearchIcon from '@mui/icons-material/Search';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useTheme as useAppTheme } from '../context/ThemeContext.jsx';
@@ -300,6 +301,45 @@ export default function Header() {
               </Button>
             )}
 
+            {/* File Manager Button */}
+            {isAuthenticated && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setSearchOpen(true)}
+                sx={(theme) => {
+                  const isDark = theme.palette.mode === 'dark';
+                  return {
+                    borderRadius: '20px',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 0.8,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    border: `1px solid ${
+                      isDark ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                    }`,
+                    color: theme.palette.text.primary,
+                    backgroundColor: isDark
+                      ? theme.palette.background.paper
+                      : '#fff',
+                    boxShadow: isDark
+                      ? '0 8px 20px rgba(0,0,0,0.55)'
+                      : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    '&:hover': {
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : '#f9fafb',
+                    },
+                  };
+                }}
+              >
+                <FolderOpenIcon sx={{ mr: 0.5, fontSize: 14 }} />
+                File Manager
+              </Button>
+            )}
+
             {/* Country Toggle */}
             <CountryToggle />
 
@@ -336,8 +376,8 @@ export default function Header() {
                 >
                   <Box
                     sx={{
-                      width: 30,
-                      height: 30,
+                      width: 25,
+                      height: 25,
                       borderRadius: '50%',
                       backgroundColor: '#000',
                       display: 'flex',

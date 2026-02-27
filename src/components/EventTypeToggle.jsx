@@ -1,16 +1,14 @@
 import { useApp } from '../context/AppContext.jsx';
 import { Box, Typography } from '@mui/material';
 
-// Primary event types – each gets its own dot color when selected.
 const PRIMARY_OPTIONS = [
   { label: 'Deposition', dotColor: '#22c55e' }, // green
-  { label: 'IME', dotColor: '#a855f7' }, // purple
-  { label: 'VOC', dotColor: '#3b82f6' }, // blue
-  { label: 'Unsworn Interview', dotColor: '#f97316' }, // orange
+  { label: 'IME', dotColor: '#3b82f6' }, // blue
+  { label: 'VOC', dotColor: '#f97316' }, // orange
+  { label: 'Unsworn Interview', dotColor: '#eab308' }, // amber
   { label: 'ENT Test', dotColor: '#ec4899' }, // pink
 ];
 
-// IME sub-types – styling is handled purely in the sx callback.
 const IME_SUB_OPTIONS = [
   { label: 'Psychological IME' },
   { label: 'ENT IME' },
@@ -65,7 +63,6 @@ export default function EventTypeToggle() {
             <Box
               key={opt.label}
               component="button"
-              type="button"
               onClick={() => setEventType(opt.label)}
               sx={(theme) => {
                 const isDark = theme.palette.mode === 'dark';
@@ -100,7 +97,7 @@ export default function EventTypeToggle() {
                 };
               }}
             >
-              {active && opt.dotColor && (
+              {active && (
                 <Box
                   sx={{
                     display: 'inline-block',
@@ -143,7 +140,7 @@ export default function EventTypeToggle() {
                   px: '16px',
                   py: '7px',
                   borderRadius: '999px',
-                  border: `1px solid ${active ? purple : '#e5e7eb'}`,
+                  border: `1px solid ${active ? '#eee' : '#e5e7eb'}`,
                   backgroundColor: active ? activeBg : '#ffffff',
                   color: active ? purple : '#000000',
                   fontSize: '12px',

@@ -29,16 +29,28 @@ export default function NotesWidget() {
   };
 
   return (
-    <Card
-      sx={{
-        borderRadius: 2,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+  <Card
+    sx={(theme) => {
+      const isDark = theme.palette.mode === 'dark';
+      return {
+        borderRadius: 3,
         border: '1px solid',
         borderColor: 'divider',
-        transition: 'box-shadow 0.2s',
-        '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
-      }}
-    >
+        backgroundColor: isDark ? theme.palette.background.paper : '#ffffff',
+        boxShadow: isDark
+          ? '0 18px 45px rgba(0,0,0,0.9)'
+          : '0 18px 45px rgba(15,23,42,0.12)',
+        transform: 'translateY(0) scale(1)',
+        transition: 'box-shadow 0.25s ease, transform 0.25s ease, background-color 0.25s ease',
+        '&:hover': {
+          boxShadow: isDark
+            ? '0 26px 60px rgba(0,0,0,1)'
+            : '0 26px 60px rgba(15,23,42,0.18)',
+          transform: 'translateY(-2px) scale(1.01)',
+        },
+      };
+    }}
+  >
       <CardContent sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

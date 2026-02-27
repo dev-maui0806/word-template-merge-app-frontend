@@ -26,9 +26,49 @@ import FormField from '../components/form/FormField.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
-import mammoth from 'mammoth';
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024; // hard safety cap before compression
+
+async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) {
+            reject(new Error('Image compression failed'));
+            return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result);
+          };
+          reader.readAsDataURL(blob);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Invalid image file'));
+    };
+    img.src = objectUrl;
+  });
+}
 
 function FormSection({ title, children }) {
   return (
@@ -105,23 +145,26 @@ export default function Form() {
     setData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  const handleImageUpload = useCallback((key, file) => {
-    if (file.size > MAX_IMAGE_SIZE) {
-      setError('Image must be 5MB or smaller');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      if (typeof base64 === 'string' && base64.startsWith('data:image/')) {
-        setImages((prev) => ({ ...prev, [key]: base64 }));
+  const handleImageUpload = useCallback(
+    async (key, file) => {
+      try {
+        if (file.size > MAX_IMAGE_SIZE) {
+          setError('Image file is too large to process. Please choose a smaller file.');
+          return;
+        }
         setError('');
-      } else {
-        setError('Please select a valid image file');
+        const compressedDataUrl = await compressImageFile(file);
+        if (typeof compressedDataUrl === 'string' && compressedDataUrl.startsWith('data:image/')) {
+          setImages((prev) => ({ ...prev, [key]: compressedDataUrl }));
+        } else {
+          setError('Please select a valid image file');
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to process image. Please try a different file.');
       }
-    };
-    reader.readAsDataURL(file);
-  }, []);
+    },
+    []
+  );
 
   const handleImageRemove = useCallback((key) => {
     setImages((prev) => {
@@ -211,6 +254,7 @@ export default function Form() {
       }
       const blob = await res.blob();
       const arrayBuffer = await blob.arrayBuffer();
+      const { default: mammoth } = await import('mammoth');
       const result = await mammoth.convertToHtml({ arrayBuffer });
       setPreviewHtml(result.value);
       setPreviewBlob(blob);
