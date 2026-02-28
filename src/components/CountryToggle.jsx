@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import {
   Button,
@@ -7,7 +7,10 @@ import {
   ListItemIcon,
   Box,
   CircularProgress,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import PublicIcon from '@mui/icons-material/Public';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CheckIcon from '@mui/icons-material/Check';
@@ -25,7 +28,17 @@ export default function CountryToggle() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const open = Boolean(anchorEl);
+
+  const filteredCountries = useMemo(() => {
+    if (!search.trim()) return countries;
+    const q = search.trim().toLowerCase();
+    return countries.filter(
+      (c) =>
+        c.label?.toLowerCase().includes(q) || c.value?.toLowerCase().includes(q)
+    );
+  }, [countries, search]);
 
   const fetchCountries = useCallback(async () => {
     setLoading(true);
@@ -57,8 +70,14 @@ export default function CountryToggle() {
     FALLBACK_COUNTRIES.find((c) => c.value === country) ||
     FALLBACK_COUNTRIES[0];
 
-  const handleOpen = (e) => setAnchorEl(e.currentTarget);
-  const handleClose = () => setAnchorEl(null);
+  const handleOpen = (e) => {
+    setAnchorEl(e.currentTarget);
+    setSearch('');
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSearch('');
+  };
   const handleSelect = (val) => {
     setCountry(val);
     handleClose();
@@ -115,12 +134,38 @@ export default function CountryToggle() {
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         slotProps={{
           paper: {
-            sx: { mt: 1.5, minWidth: 160, borderRadius: 2 },
+            sx: { mt: 1.5, minWidth: 220, maxHeight: 360, borderRadius: 2 },
           },
         }}
         MenuListProps={{ role: 'listbox' }}
       >
-        {countries.map((c) => (
+        <Box sx={{ px: 1.5, pb: 1 }} onClick={(e) => e.stopPropagation()}>
+          <TextField
+            size="small"
+            placeholder="Search country…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+        </Box>
+        {filteredCountries.length === 0 ? (
+          <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+            No countries match
+          </MenuItem>
+        ) : (
+        filteredCountries.map((c) => (
           <MenuItem
             key={c.value}
             selected={c.value === country}
@@ -136,7 +181,8 @@ export default function CountryToggle() {
             )}
             {c.label}
           </MenuItem>
-        ))}
+        )))
+        }
       </Menu>
     </>
   );

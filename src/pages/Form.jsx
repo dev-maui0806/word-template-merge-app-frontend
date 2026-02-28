@@ -3,13 +3,14 @@
  * Fetches field metadata from backend, renders inputs, submits to generate endpoint.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
   Container,
   Dialog,
   DialogContent,
@@ -73,7 +74,17 @@ async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, qualit
 function FormSection({ title, children }) {
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="overline" color="primary" fontWeight={700} sx={{ display: 'block', mb: 2 }}>
+      <Typography
+        variant="overline"
+        color="error"
+        fontWeight={700}
+        sx={{
+          display: 'block',
+          mb: 2,
+          fontSize: '0.7rem',
+          letterSpacing: '0.16em',
+        }}
+      >
         {title}
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>{children}</Box>
@@ -108,6 +119,9 @@ export default function Form() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewBlob, setPreviewBlob] = useState(null);
+  const [previewEditing, setPreviewEditing] = useState(false);
+  const [previewEditedHtml, setPreviewEditedHtml] = useState('');
+  const previewContentRef = useRef(null);
 
   useEffect(() => {
     if (!actionSlug) return;
@@ -230,18 +244,7 @@ export default function Form() {
   const handlePreview = async () => {
     setError('');
     setSuccess('');
-    
-    // Validate required context values
-    const eventType = getEventTypeForBackend();
-    if (!eventType) {
-      setError('Please select an Event Type before previewing the document.');
-      return;
-    }
-    if (!country) {
-      setError('Please select a Country before previewing the document.');
-      return;
-    }
-    
+    // Preview opens even with no variable fields entered; backend handles empty values in preview mode.
     setSubmitLoading(true);
     try {
       const res = await api(`/generate/${actionSlug}`, {
@@ -256,9 +259,12 @@ export default function Form() {
       const arrayBuffer = await blob.arrayBuffer();
       const { default: mammoth } = await import('mammoth');
       const result = await mammoth.convertToHtml({ arrayBuffer });
-      setPreviewHtml(result.value);
+      const html = result.value;
+      setPreviewHtml(html);
+      setPreviewEditedHtml(html);
       setPreviewBlob(blob);
       setPreviewOpen(true);
+      setPreviewEditing(false);
       setSuccess('Document preview generated successfully!');
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000);
@@ -279,16 +285,45 @@ export default function Form() {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadEditedHtml = () => {
+    const fromRef = previewContentRef.current?.innerHTML;
+    const htmlToUse = fromRef || previewEditedHtml || previewHtml;
+    if (!htmlToUse) return;
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${htmlToUse}</body></html>`;
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${actionSlug}-edited.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSaveAndDownload = async () => {
     setPreviewOpen(false);
     setPreviewHtml('');
     setPreviewBlob(null);
+    setPreviewEditedHtml('');
     await handleGenerate();
   };
 
+  // Set content once when dialog opens (uncontrolled - avoids cursor reset on typing)
+  useEffect(() => {
+    if (!previewOpen || !previewHtml) return;
+    const setContent = () => {
+      const el = previewContentRef.current;
+      if (el && !el.innerHTML.trim()) {
+        el.innerHTML = previewHtml;
+      }
+    };
+    setContent();
+    const t = setTimeout(setContent, 50);
+    return () => clearTimeout(t);
+  }, [previewOpen, previewHtml]);
+
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', pb: 4 }}>
+      <Box sx={(theme) => ({ minHeight: '100vh', pb: 4, bgcolor: theme.palette.background.default })}>
         <Header />
         <Container maxWidth="md" sx={{ py: 4 }}>
           <Typography color="text.secondary">Loading form…</Typography>
@@ -299,7 +334,7 @@ export default function Form() {
 
   if (metaError || !metadata?.ok) {
     return (
-      <Box sx={{ minHeight: '100vh', pb: 4 }}>
+      <Box sx={(theme) => ({ minHeight: '100vh', pb: 4, bgcolor: theme.palette.background.default })}>
         <Header />
         <Container maxWidth="md" sx={{ py: 4 }}>
           <Alert severity="error">{metaError || metadata?.error || 'Template not found'}</Alert>
@@ -312,7 +347,14 @@ export default function Form() {
   }
 
   const fields = metadata.fields || [];
-  const bySection = fields.reduce((acc, f) => {
+  // TYPE fields (Meeting_Type, Room_Type, etc.) go in header at top-right; exclude from sections
+  const typeFields = fields.filter(
+    (f) => f.type === 'select' && f.name !== 'Event_Type' && /_Type$/.test(f.name)
+  );
+  const sectionFields = fields.filter(
+    (f) => !typeFields.some((tf) => tf.name === f.name)
+  );
+  const bySection = sectionFields.reduce((acc, f) => {
     const s = f.section || 'General';
     if (!acc[s]) acc[s] = [];
     acc[s].push(f);
@@ -328,23 +370,140 @@ export default function Form() {
   });
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 4 }}>
+    <Box
+      sx={(theme) => ({
+        minHeight: '100vh',
+        pb: 4,
+        bgcolor: theme.palette.background.default,
+      })}
+    >
       <Header />
       <Container maxWidth="md" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ textTransform: 'none' }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(-1)}
+            sx={{ textTransform: 'none', fontWeight: 500 }}
+          >
             Back
           </Button>
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h4">{slugToTitle(actionSlug)}</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              sx={{
+                fontSize: { xs: '1.5rem', sm: '1.75rem' },
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: 'text.primary',
+              }}
+            >
+              {slugToTitle(actionSlug)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {country} – {getEventTypeForBackend() || 'Select event type'}
             </Typography>
           </Box>
         </Box>
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
+        <Card
+          sx={(theme) => {
+            const isDark = theme.palette.mode === 'dark';
+            return {
+              mb: 3,
+              borderRadius: '24px',
+              backgroundColor: isDark ? theme.palette.background.paper : '#ffffff',
+              boxShadow: isDark
+                ? '0 18px 45px rgba(0,0,0,0.9)'
+                : '0 18px 45px rgba(15,23,42,0.12)',
+              transition: 'background-color 0.25s ease, box-shadow 0.25s ease',
+              '&:hover': {
+                boxShadow: isDark
+                  ? '0 26px 60px rgba(0,0,0,1)'
+                  : '0 26px 60px rgba(15,23,42,0.18)',
+              },
+            };
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            {/* Header row: TYPE toggles at top-right (Meeting Type, Room Type, etc.) */}
+            {typeFields.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  mb: 3,
+                  pb: 2,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                {typeFields.map((f) => (
+                  <Box key={f.name} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.75 }}>
+                    <Typography
+                      variant="overline"
+                      sx={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.16em',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {f.label.toUpperCase()}
+                    </Typography>
+                    <Box
+                      sx={(theme) => ({
+                        display: 'flex',
+                        gap: 0.5,
+                        flexWrap: 'wrap',
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : '#f2f3f5',
+                        borderRadius: '50px',
+                        p: 0.5,
+                        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : '#e2e4e8'}`,
+                      })}
+                    >
+                      {(f.options || []).map((opt) => {
+                        const active = (data[f.name] ?? f.default ?? '') === opt;
+                        return (
+                          <Box
+                            key={opt}
+                            component="button"
+                            type="button"
+                            onClick={() => handleChange(f.name, opt)}
+                            sx={(theme) => ({
+                              px: 2,
+                              py: 1,
+                              borderRadius: '50px',
+                              border: 'none',
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              backgroundColor: active
+                                ? theme.palette.error.main
+                                : 'transparent',
+                              color: active ? '#fff' : theme.palette.text.primary,
+                              transition: 'background-color 0.2s ease, color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: active
+                                  ? theme.palette.error.dark
+                                  : theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.08)'
+                                    : 'rgba(255,255,255,0.9)',
+                              },
+                            })}
+                          >
+                            {opt}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+
             {fields.length === 0 ? (
               <Alert severity="info">
                 No template variables were detected in this template. If your document uses placeholders like {'{{Variable_Name}}'}, ensure the template file exists and is valid. You can still use Preview or Generate Document.
@@ -402,21 +561,68 @@ export default function Form() {
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-          <Button variant="outlined" onClick={handlePreview} disabled={submitLoading}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2,
+            mt: 1,
+          }}
+        >
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handlePreview}
+            disabled={submitLoading}
+            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
+          >
             Preview
           </Button>
-          <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleGenerate} disabled={submitLoading}>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<DownloadIcon />}
+            onClick={handleGenerate}
+            disabled={submitLoading}
+            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
+          >
             Generate Document
           </Button>
         </Box>
 
-        <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { minHeight: '70vh' } }}>
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 2 }}>
-            Template Preview
-            <Box sx={{ display: 'flex', gap: 1 }}>
+        <Dialog
+          open={previewOpen}
+          onClose={() => {
+            setPreviewOpen(false);
+            setPreviewEditing(false);
+          }}
+          maxWidth="md"
+          fullWidth
+          slotProps={{
+            transition: {
+              onEntered: () => {
+                if (previewContentRef.current && previewHtml) {
+                  previewContentRef.current.innerHTML = previewHtml;
+                }
+              },
+            },
+          }}
+          PaperProps={{ sx: { minHeight: '70vh' } }}
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 2, flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              Template Preview
+              {previewEditing && (
+                <Chip label="Editing" color="primary" size="small" sx={{ fontWeight: 600 }} />
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Button variant="outlined" color="error" size="small" onClick={handleDownloadTemplate} disabled={!previewBlob}>
                 Download Template
+              </Button>
+              <Button variant="outlined" size="small" onClick={handleDownloadEditedHtml} disabled={!previewHtml}>
+                Download Edited (HTML)
               </Button>
               <Button variant="contained" color="error" size="small" onClick={handleSaveAndDownload}>
                 Save and Download
@@ -426,19 +632,44 @@ export default function Form() {
           <DialogContent dividers sx={{ bgcolor: 'grey.100' }}>
             <Box
               sx={{
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'error.main',
-                borderRadius: 0,
-                minHeight: 400,
-                maxWidth: 595,
-                mx: 'auto',
-                p: 3,
-                '& p': { m: 0, mb: 1 },
-                '& p:last-child': { mb: 0 },
+                display: 'flex',
+                justifyContent: 'center',
+                py: 2,
               }}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+            >
+              <Box
+                ref={previewContentRef}
+                contentEditable
+                suppressContentEditableWarning
+                onFocus={() => setPreviewEditing(true)}
+                onBlur={() => setPreviewEditing(false)}
+                sx={(theme) => ({
+                  bgcolor: 'background.paper',
+                  border: '2px solid',
+                  borderColor: previewEditing ? 'primary.main' : 'divider',
+                  borderRadius: 1,
+                  minHeight: 400,
+                  width: '100%',
+                  maxWidth: 595,
+                  p: 3,
+                  outline: 'none',
+                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                  boxShadow: previewEditing
+                    ? `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.25)' : 'rgba(25, 118, 210, 0.15)'}, 0 4px 20px rgba(0,0,0,0.08)`
+                    : '0 2px 8px rgba(0,0,0,0.06)',
+                  '&:hover': {
+                    boxShadow: previewEditing
+                      ? undefined
+                      : `0 0 0 2px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}, 0 4px 12px rgba(0,0,0,0.08)`,
+                  },
+                  '&:focus': {
+                    boxShadow: `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.2)'}`,
+                  },
+                  '& p': { m: 0, mb: 1 },
+                  '& p:last-child': { mb: 0 },
+                })}
+              />
+            </Box>
           </DialogContent>
         </Dialog>
 

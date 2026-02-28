@@ -9,6 +9,7 @@ import Form from './pages/Form.jsx';
 import Admin from './pages/Admin.jsx';
 import Settings from './pages/Settings.jsx';
 import Checkout from './pages/Checkout.jsx';
+import Policy from './pages/Policy.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
 import './index.css';
@@ -21,6 +22,15 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/privacy_policy" element={<Policy />} />
+              <Route path="/refund_policy" element={<Policy />} />
+              <Route path="/terms-and-conditions" element={<Policy />} />
+              <Route path="/T&C" element={<Policy />} />
+              <Route path="/T%26C" element={<Policy />} />
+              <Route path="/cookie_policy" element={<Policy />} />
+              <Route path="/Cookie_Policy" element={<Policy />} />
+              <Route path="/legal_disclaimer" element={<Policy />} />
+              <Route path="/Legal_Disclaimer" element={<Policy />} />
               <Route path="/arrange-venue" element={<Navigate to="/form/arrange-venue" replace />} />
               <Route
                 path="/form/:actionSlug"

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Container,
   List,
   ListItemButton,
@@ -143,12 +143,34 @@ export default function Settings() {
 }
 
 function SubscriptionSection() {
-  const navigate = useNavigate();
   const { refreshUser } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     refreshUser?.();
   }, [refreshUser]);
+
+  const handlePlanClick = async (planId) => {
+    setError('');
+    setLoadingPlan(planId);
+    try {
+      const res = await api('/payments/phonepe/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan: planId }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Failed to start PhonePe checkout');
+      }
+      const d = await res.json();
+      if (!d.url) throw new Error('PhonePe checkout URL missing');
+      window.location.href = d.url;
+    } catch (err) {
+      setError(err.message || 'Payment initialization failed');
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <Fade in timeout={500}>
@@ -201,6 +223,12 @@ function SubscriptionSection() {
           <SubscriptionBadge />
         </Box>
 
+        {error && (
+          <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1 }}>
+            {error}
+          </Alert>
+        )}
+
         <Box
           sx={{
             display: 'grid',
@@ -216,19 +244,21 @@ function SubscriptionSection() {
               key={plan.id}
               variant="outlined"
               sx={{
-                cursor: 'pointer',
+                cursor: loadingPlan ? 'wait' : 'pointer',
                 borderRadius: 1,
                 borderColor: plan.highlight ? 'primary.main' : 'divider',
                 borderWidth: plan.highlight ? 2 : 1,
                 background: plan.highlight
                   ? 'linear-gradient(135deg, rgba(244, 63, 94, 0.06), rgba(59, 130, 246, 0.06))'
                   : 'background.paper',
+                opacity: loadingPlan && loadingPlan !== plan.id ? 0.6 : 1,
+                pointerEvents: loadingPlan ? 'none' : 'auto',
                 '&:hover': {
                   borderColor: 'primary.main',
                   boxShadow: 4,
                 },
               }}
-              onClick={() => navigate(`/checkout?plan=${plan.id}`)}
+              onClick={() => handlePlanClick(plan.id)}
             >
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
@@ -255,7 +285,14 @@ function SubscriptionSection() {
                   color="primary"
                   sx={{ display: 'block', mt: 1, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}
                 >
-                  Continue to checkout →
+                  {loadingPlan === plan.id ? (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                      <CircularProgress size={12} sx={{ color: 'primary.main' }} />
+                      Redirecting to PhonePe…
+                    </Box>
+                  ) : (
+                    'Continue to PhonePe →'
+                  )}
                 </Typography>
               </CardContent>
             </Card>

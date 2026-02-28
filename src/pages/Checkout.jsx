@@ -1,21 +1,49 @@
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Button, Card, CardContent, Typography, Container } from '@mui/material';
+import { Box, Button, Card, CardContent, Typography, Container, Alert } from '@mui/material';
 import Header from '../components/Header.jsx';
+import { api } from '../api/client.js';
 
 function usePlan() {
   const params = new URLSearchParams(useLocation().search);
   const plan = params.get('plan') || 'monthly';
   const details = {
-    monthly: { name: 'Monthly', price: '₹799' },
-    quarterly: { name: 'Quarterly', price: '₹2,099' },
-    yearly: { name: 'Yearly', price: '₹6,999' },
+    monthly: { id: 'monthly', name: 'Monthly', price: '₹799' },
+    quarterly: { id: 'quarterly', name: 'Quarterly', price: '₹2,099' },
+    yearly: { id: 'yearly', name: 'Yearly', price: '₹6,999' },
   }[plan] || { name: 'Monthly', price: '₹799' };
   return details;
 }
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { name, price } = usePlan();
+  const { id: planId, name, price } = usePlan();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const canPay = useMemo(() => !!planId, [planId]);
+
+  const handlePay = async () => {
+    if (!canPay) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api('/payments/phonepe/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan: planId }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Failed to start PhonePe checkout');
+      }
+      const d = await res.json();
+      if (!d.url) throw new Error('PhonePe checkout URL missing');
+      window.location.href = d.url;
+    } catch (err) {
+      setError(err.message || 'Payment initialization failed');
+      setLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', pb: 4 }}>
@@ -30,12 +58,19 @@ export default function Checkout() {
             <Typography variant="body1" sx={{ mb: 1 }}>
               Selected plan: <strong>{name}</strong> – <strong>{price}</strong>
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Stripe checkout integration will be wired here in the backend. For now, this is a front-end placeholder.
-            </Typography>
-            <Button variant="contained" color="primary" onClick={() => navigate('/settings')}>
-              Back to settings
-            </Button>
+            {error && (
+              <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button variant="contained" color="primary" onClick={handlePay} disabled={loading}>
+                {loading ? 'Redirecting…' : 'Continue to PhonePe'}
+              </Button>
+              <Button variant="outlined" onClick={() => navigate('/settings')} disabled={loading}>
+                Back to settings
+              </Button>
+            </Box>
           </CardContent>
         </Card>
       </Container>
