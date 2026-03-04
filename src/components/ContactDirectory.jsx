@@ -28,21 +28,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { api } from '../api/client.js';
 
-const CATEGORIES = [
-  { value: 'ALL', label: 'ALL' },
-  { value: 'CAB', label: 'CAB' },
-  { value: 'HOTEL', label: 'HOTEL' },
-  { value: 'NOTARY', label: 'NOTARY' },
-  { value: 'DOCTOR', label: 'DOCTOR' },
-];
-
-const FORM_CATEGORIES = [
-  { value: 'CAB', label: 'CAB' },
-  { value: 'HOTEL', label: 'HOTEL' },
-  { value: 'NOTARY', label: 'NOTARY' },
-  { value: 'DOCTOR', label: 'DOCTOR' },
-  { value: 'CUSTOM', label: 'CUSTOM' },
-];
+const BASE_CATEGORIES = ['CAB', 'HOTEL', 'NOTARY', 'DOCTOR'];
 
 export default function ContactDirectory({ open, onClose }) {
   const [view, setView] = useState('list'); // 'list' | 'add'
@@ -59,6 +45,33 @@ export default function ContactDirectory({ open, onClose }) {
   const [formCity, setFormCity] = useState('');
   const [formCategory, setFormCategory] = useState('CAB');
   const [saving, setSaving] = useState(false);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
+
+  // Load/save custom categories from localStorage so they persist without page refresh.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('contactCustomCategories');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCustomCategories(parsed.filter((v) => typeof v === 'string' && v.trim()));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const unique = Array.from(new Set(customCategories.filter((v) => typeof v === 'string' && v.trim())));
+      localStorage.setItem('contactCustomCategories', JSON.stringify(unique));
+    } catch {
+      // ignore
+    }
+  }, [customCategories]);
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
@@ -95,12 +108,31 @@ export default function ContactDirectory({ open, onClose }) {
     setFormMail('');
     setFormCity('');
     setFormCategory('CAB');
+    setIsCreatingCategory(false);
+    setCustomCategoryInput('');
     setError('');
   };
 
   const handleCancelAdd = () => {
     setView('list');
     setError('');
+  };
+
+  const handleStartCustomCategory = () => {
+    setIsCreatingCategory(true);
+    setCustomCategoryInput('');
+  };
+
+  const handleSaveCustomCategory = () => {
+    const raw = customCategoryInput.trim();
+    if (!raw) return;
+    const value = raw.toUpperCase();
+    if (!BASE_CATEGORIES.includes(value) && !customCategories.includes(value)) {
+      setCustomCategories((prev) => [...prev, value]);
+    }
+    setFormCategory(value);
+    setIsCreatingCategory(false);
+    setCustomCategoryInput('');
   };
 
   const handleSaveContact = async (e) => {
@@ -194,7 +226,7 @@ export default function ContactDirectory({ open, onClose }) {
                 }}
               />
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                {CATEGORIES.map(({ value, label }) => (
+                {['ALL', ...BASE_CATEGORIES, ...customCategories].map((value) => (
                   <Button
                     key={value}
                     size="small"
@@ -206,7 +238,7 @@ export default function ContactDirectory({ open, onClose }) {
                       minWidth: 70,
                     }}
                   >
-                    {label}
+                    {value}
                   </Button>
                 ))}
               </Box>
@@ -461,7 +493,7 @@ export default function ContactDirectory({ open, onClose }) {
                   CATEGORY
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {FORM_CATEGORIES.map(({ value, label }) => (
+                  {[...BASE_CATEGORIES, ...customCategories].map((value) => (
                     <Button
                       key={value}
                       type="button"
@@ -473,11 +505,61 @@ export default function ContactDirectory({ open, onClose }) {
                         borderRadius: '999px',
                       }}
                     >
-                      {label}
+                      {value}
                     </Button>
                   ))}
+                  <Button
+                    type="button"
+                    size="small"
+                    variant={isCreatingCategory ? 'contained' : 'outlined'}
+                    onClick={handleStartCustomCategory}
+                    sx={{
+                      textTransform: 'none',
+                      borderRadius: '999px',
+                    }}
+                  >
+                    CUSTOM
+                  </Button>
                 </Box>
               </Box>
+              {isCreatingCategory && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mt: 1,
+                    ml: { xs: 0, sm: '96px' },
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    label="New category name"
+                    value={customCategoryInput}
+                    onChange={(e) => setCustomCategoryInput(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <Button
+                    type="button"
+                    variant="contained"
+                    disabled={!customCategoryInput.trim()}
+                    onClick={handleSaveCustomCategory}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Save category
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingCategory(false);
+                      setCustomCategoryInput('');
+                    }}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              )}
               <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                 <Button onClick={handleCancelAdd} sx={{ textTransform: 'none' }}>
                   Cancel

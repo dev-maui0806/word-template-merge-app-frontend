@@ -2,16 +2,29 @@
  * FormField: Renders the appropriate input component based on field definition.
  */
 
+import { useState } from 'react';
 import dayjs from 'dayjs';
-import { Box, TextField, Chip } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { Box, TextField, Chip, Slider, FormControlLabel, Switch } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DateWheelPickerDialog from '../pickers/DateWheelPickerDialog.jsx';
+import TimeWheelPickerDialog from '../pickers/TimeWheelPickerDialog.jsx';
 
 const INPUT_PROPS = { InputLabelProps: { shrink: true } };
 
-export default function FormField({ field, value, onChange, onImageUpload, onImageRemove, error }) {
+export default function FormField({
+  field,
+  value,
+  onChange,
+  onImageUpload,
+  onImageRemove,
+  imageLayout,
+  onImageLayoutChange,
+  error,
+}) {
   const { name, type, label, placeholder, options = [], fullWidth } = field;
+
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
 
   const common = {
     fullWidth: true,
@@ -35,18 +48,28 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
 
   if (type === 'date') {
     const dateValue = value && dayjs(value).isValid() ? dayjs(value) : null;
+    const display = dateValue ? dateValue.format('DD MMM YYYY') : '';
     return (
-      <DatePicker
-        label={label}
-        value={dateValue}
-        onChange={(date) => onChange(name, date ? date.format('YYYY-MM-DD') : '')}
-        slotProps={{
-          textField: {
-            ...common,
-            fullWidth: true,
-          },
-        }}
-      />
+      <>
+        <TextField
+          {...common}
+          label={label}
+          value={display}
+          onClick={() => setDatePickerOpen(true)}
+          placeholder={placeholder}
+          InputProps={{
+            readOnly: true,
+          }}
+        />
+        <DateWheelPickerDialog
+          open={datePickerOpen}
+          value={value || ''}
+          onClose={() => setDatePickerOpen(false)}
+          onConfirm={(iso) => {
+            onChange(name, iso);
+          }}
+        />
+      </>
     );
   }
 
@@ -54,18 +77,28 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
     const timeValue = value && /^\d{1,2}:\d{2}(?::\d{2})?$/.test(String(value))
       ? dayjs(`1970-01-01T${value}`)
       : null;
+    const display = timeValue ? timeValue.format('HH:mm') : '';
     return (
-      <TimePicker
-        label={label}
-        value={timeValue}
-        onChange={(time) => onChange(name, time ? time.format('HH:mm') : '')}
-        slotProps={{
-          textField: {
-            ...common,
-            fullWidth: true,
-          },
-        }}
-      />
+      <>
+        <TextField
+          {...common}
+          label={label}
+          value={display}
+          onClick={() => setTimePickerOpen(true)}
+          placeholder={placeholder}
+          InputProps={{
+            readOnly: true,
+          }}
+        />
+        <TimeWheelPickerDialog
+          open={timePickerOpen}
+          value={display}
+          onClose={() => setTimePickerOpen(false)}
+          onConfirm={(timeStr) => {
+            onChange(name, timeStr);
+          }}
+        />
+      </>
     );
   }
 
@@ -118,6 +151,8 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
 
   if (type === 'image') {
     const hasImage = !!value;
+    const sizingMode = imageLayout?.mode || 'auto'; // auto | custom
+    const widthPercent = Number.isFinite(Number(imageLayout?.widthPercent)) ? Number(imageLayout?.widthPercent) : 100;
     return (
       <Box sx={{ gridColumn: fullWidth ? '1 / -1' : undefined }}>
         <Box
@@ -173,6 +208,59 @@ export default function FormField({ field, value, onChange, onImageUpload, onIma
                 p: 0.5,
               }}
             />
+            <Box sx={{ width: '100%', maxWidth: 420 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={sizingMode === 'custom'}
+                    onChange={(e) => {
+                      onImageLayoutChange?.(name, {
+                        ...(imageLayout || {}),
+                        mode: e.target.checked ? 'custom' : 'auto',
+                      });
+                    }}
+                  />
+                }
+                label="Custom size"
+              />
+              {sizingMode === 'custom' && (
+                <Box sx={{ px: 1, pb: 1 }}>
+                  <Box sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 0.5 }}>
+                    Width (% of page content)
+                  </Box>
+                  <Slider
+                    value={Math.min(100, Math.max(10, widthPercent || 100))}
+                    min={10}
+                    max={100}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    onChange={(_, v) => {
+                      const next = Array.isArray(v) ? v[0] : v;
+                      onImageLayoutChange?.(name, {
+                        ...(imageLayout || {}),
+                        mode: 'custom',
+                        widthPercent: next,
+                      });
+                    }}
+                  />
+                  <TextField
+                    {...common}
+                    label="Width (%)"
+                    type="number"
+                    value={Math.min(100, Math.max(10, widthPercent || 100))}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      onImageLayoutChange?.(name, {
+                        ...(imageLayout || {}),
+                        mode: 'custom',
+                        widthPercent: Number.isFinite(next) ? next : 100,
+                      });
+                    }}
+                    helperText="Keeps aspect ratio. Preview + final DOCX will use this size."
+                  />
+                </Box>
+              )}
+            </Box>
             <Chip label="Remove" size="small" color="error" variant="outlined" onClick={() => onImageRemove?.(name)} />
           </Box>
         )}

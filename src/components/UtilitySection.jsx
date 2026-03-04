@@ -14,6 +14,8 @@ import {
   IconButton,
   Button,
   Toolbar,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -23,6 +25,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import { api } from '../api/client.js';
+import SearchIcon from '@mui/icons-material/Search';
 import dayjs from 'dayjs';
 import { renderAsync } from 'docx-preview';
 import ContactDirectory from './ContactDirectory.jsx';
@@ -63,6 +66,7 @@ export default function UtilitySection() {
   const [docList, setDocList] = useState([]);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   // Full-screen preview
   const [previewDoc, setPreviewDoc] = useState(null); // { id, actionSlug }
@@ -382,9 +386,24 @@ export default function UtilitySection() {
             </Alert>
           )}
 
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-            Documents created since sign-up
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              File Manager – documents grouped by event date and claimant.
+            </Typography>
+            <TextField
+              size="small"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by claimant, event date, event type, folder, or file name…"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
           {listLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress size={32} />
@@ -394,21 +413,85 @@ export default function UtilitySection() {
               No saved documents yet. Generate a document from a form to see it here.
             </Typography>
           ) : (
-            <List dense disablePadding>
-              {docList.map((doc) => (
-                <ListItemButton
-                  key={doc.id}
-                  onClick={() => handleSelectDocument(doc)}
-                >
-                  <ListItemText
-                    primary={doc.actionSlug?.replace(/-/g, ' ') || 'Document'}
-                    secondary={doc.createdAt ? dayjs(doc.createdAt).format('D MMM YYYY, HH:mm') : ''}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
-                </ListItemButton>
-              ))}
-            </List>
+            (() => {
+              const q = search.trim().toLowerCase();
+
+              const slugToTitle = (slug = '') =>
+                String(slug)
+                  .split('-')
+                  .filter(Boolean)
+                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ');
+
+              const enriched = docList.map((d) => {
+                const folderName = d.folderName || 'Uncategorized';
+                const eventType = d.eventType || slugToTitle(d.actionSlug || '');
+                const claimantName = d.claimantName || '';
+                const fileName = `${eventType || 'Document'}.docx`;
+                const eventDateLabel =
+                  d.eventDateDisplay ||
+                  (d.createdAt ? dayjs(d.createdAt).format('D MMM YYYY') : '');
+                const haystack = [
+                  folderName,
+                  fileName,
+                  claimantName,
+                  eventType,
+                  eventDateLabel,
+                ]
+                  .join(' ')
+                  .toLowerCase();
+                const matches = !q || haystack.includes(q);
+                return { ...d, folderName, eventType, claimantName, fileName, eventDateLabel, matches };
+              });
+
+              const grouped = enriched.reduce((acc, doc) => {
+                if (!doc.matches) return acc;
+                if (!acc[doc.folderName]) acc[doc.folderName] = [];
+                acc[doc.folderName].push(doc);
+                return acc;
+              }, {});
+
+              const folderNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+
+              if (folderNames.length === 0) {
+                return (
+                  <Typography variant="body2" color="text.secondary">
+                    No documents match this search yet.
+                  </Typography>
+                );
+              }
+
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {folderNames.map((folder) => (
+                    <Box key={folder}>
+                      <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600 }}>
+                        {folder}
+                      </Typography>
+                      <List dense disablePadding sx={{ pl: 1 }}>
+                        {grouped[folder].map((doc) => (
+                          <ListItemButton
+                            key={doc.id}
+                            onClick={() => handleSelectDocument(doc)}
+                          >
+                            <ListItemText
+                              primary={doc.fileName}
+                              secondary={
+                                doc.eventDateLabel
+                                  ? `${doc.eventType} • ${doc.eventDateLabel}`
+                                  : doc.eventType
+                              }
+                              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                              secondaryTypographyProps={{ variant: 'caption' }}
+                            />
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    </Box>
+                  ))}
+                </Box>
+              );
+            })()
           )}
         </DialogContent>
       </Dialog>

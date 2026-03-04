@@ -20,6 +20,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DownloadIcon from '@mui/icons-material/Download';
 import Header from '../components/Header.jsx';
@@ -113,6 +114,7 @@ export default function Form() {
   const [metaError, setMetaError] = useState('');
   const [data, setData] = useState({});
   const [images, setImages] = useState({});
+  const [imageLayout, setImageLayout] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -122,6 +124,7 @@ export default function Form() {
   const [previewEditing, setPreviewEditing] = useState(false);
   const [previewEditedHtml, setPreviewEditedHtml] = useState('');
   const previewContentRef = useRef(null);
+  const [claimantOptions, setClaimantOptions] = useState([]);
 
   useEffect(() => {
     if (!actionSlug) return;
@@ -155,6 +158,28 @@ export default function Form() {
     return () => { cancelled = true; };
   }, [actionSlug]);
 
+  // Load claimant name suggestions from history (File Manager) for autosuggest.
+  useEffect(() => {
+    let cancelled = false;
+    api('/documents/claimants', { method: 'GET' })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => { throw new Error(d.error || 'Failed to load claimants'); });
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.ok && Array.isArray(data.claimants)) {
+          setClaimantOptions(data.claimants);
+        }
+      })
+      .catch(() => {
+        // Silent fail – autosuggest is optional.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleChange = useCallback((name, value) => {
     setData((prev) => ({ ...prev, [name]: value }));
   }, []);
@@ -186,6 +211,15 @@ export default function Form() {
       delete next[key];
       return next;
     });
+    setImageLayout((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const handleImageLayoutChange = useCallback((key, layout) => {
+    setImageLayout((prev) => ({ ...prev, [key]: layout }));
   }, []);
 
   const buildPayload = useCallback(() => {
@@ -195,8 +229,19 @@ export default function Form() {
     payload.Country = country;
     payload.Event_Type = getEventTypeForBackend();
     if (Object.keys(images).length) payload.images = images;
+    if (Object.keys(imageLayout).length) {
+      // Send only sizing-relevant fields to backend
+      const out = {};
+      for (const [k, v] of Object.entries(imageLayout)) {
+        if (!v || typeof v !== 'object') continue;
+        if (v.mode === 'custom') {
+          out[k] = { widthPercent: v.widthPercent };
+        }
+      }
+      if (Object.keys(out).length) payload.imageLayout = out;
+    }
     return payload;
-  }, [data, images, country, getEventTypeForBackend]);
+  }, [data, images, imageLayout, country, getEventTypeForBackend]);
 
   const handleGenerate = async () => {
     setError('');
@@ -531,6 +576,29 @@ export default function Form() {
                           </FormRow>
                         );
                       }
+                      // Special handling for Claimant_Name: autosuggest from previous documents
+                      if (f.name === 'Claimant_Name') {
+                        return (
+                          <FormRow key={f.name} fullWidth={f.fullWidth}>
+                            <Autocomplete
+                              freeSolo
+                              options={claimantOptions}
+                              value={data[f.name] ?? ''}
+                              onInputChange={(_, newValue) => handleChange(f.name, newValue)}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  fullWidth
+                                  size="medium"
+                                  label={f.label}
+                                  placeholder={f.placeholder}
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              )}
+                            />
+                          </FormRow>
+                        );
+                      }
                       return (
                         <FormRow key={f.name} fullWidth={f.fullWidth}>
                           <FormField
@@ -539,6 +607,8 @@ export default function Form() {
                             onChange={handleChange}
                             onImageUpload={handleImageUpload}
                             onImageRemove={handleImageRemove}
+                            imageLayout={f.type === 'image' ? imageLayout[f.name] : undefined}
+                            onImageLayoutChange={handleImageLayoutChange}
                           />
                         </FormRow>
                       );
