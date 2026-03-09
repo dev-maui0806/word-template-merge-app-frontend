@@ -9,36 +9,64 @@ import {
   CircularProgress,
   TextField,
   InputAdornment,
+  Typography,
+  IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PublicIcon from '@mui/icons-material/Public';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CheckIcon from '@mui/icons-material/Check';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { api } from '../api/client.js';
 
 /** Fallback when API fails */
 const FALLBACK_COUNTRIES = [
-  { value: 'India', label: 'IN India' },
-  { value: 'UAE', label: 'AE UAE' },
-  { value: 'Australia', label: 'AU Australia' },
+  {
+    id: 'fallback-in',
+    name: 'India',
+    code: 'IN',
+    label: 'IN India',
+    hasMultipleTimezones: false,
+    countryCode: '+91',
+    standardTime: 'India Standard Time',
+    timeShort: 'IST',
+    currency: 'INR',
+  },
+  {
+    id: 'fallback-ae',
+    name: 'UAE',
+    code: 'AE',
+    label: 'AE UAE',
+    hasMultipleTimezones: false,
+    countryCode: '+971',
+    standardTime: 'Gulf Standard Time (GST)',
+    timeShort: 'GST',
+    currency: 'AED',
+  },
+  {
+    id: 'fallback-au',
+    name: 'Australia',
+    code: 'AU',
+    label: 'AU Australia',
+    hasMultipleTimezones: false,
+    countryCode: '+61',
+    standardTime: 'Australian Eastern Standard Time (AEST)',
+    timeShort: 'AEST',
+    currency: 'AUD',
+  },
 ];
 
 export default function CountryToggle() {
-  const { country, setCountry } = useApp();
+  const { country, countryTimezoneId, setCountry, setCountryTimezone } = useApp();
   const [anchorEl, setAnchorEl] = useState(null);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [menuMode, setMenuMode] = useState('countries');
+  const [timezoneCountry, setTimezoneCountry] = useState(null);
+  const [timezones, setTimezones] = useState([]);
+  const [timezonesLoading, setTimezonesLoading] = useState(false);
   const open = Boolean(anchorEl);
-
-  const filteredCountries = useMemo(() => {
-    if (!search.trim()) return countries;
-    const q = search.trim().toLowerCase();
-    return countries.filter(
-      (c) =>
-        c.label?.toLowerCase().includes(q) || c.value?.toLowerCase().includes(q)
-    );
-  }, [countries, search]);
 
   const fetchCountries = useCallback(async () => {
     setLoading(true);
@@ -46,10 +74,7 @@ export default function CountryToggle() {
       const res = await api('/countries', { method: 'GET' });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data)
-          ? data.map((c) => ({ value: c.name, label: c.label || `${c.code} ${c.name}` }))
-          : [];
-        setCountries(list.length > 0 ? list : FALLBACK_COUNTRIES);
+        setCountries(Array.isArray(data) && data.length > 0 ? data : FALLBACK_COUNTRIES);
       } else {
         setCountries(FALLBACK_COUNTRIES);
       }
@@ -64,24 +89,92 @@ export default function CountryToggle() {
     fetchCountries();
   }, [fetchCountries]);
 
-  const current =
-    countries.find((c) => c.value === country) ||
-    countries[0] ||
-    FALLBACK_COUNTRIES.find((c) => c.value === country) ||
-    FALLBACK_COUNTRIES[0];
+  const selectedCountry = useMemo(
+    () => countries.find((c) => c.name === country),
+    [countries, country]
+  );
+
+  const fetchTimezones = useCallback(async (countryId) => {
+    setTimezonesLoading(true);
+    try {
+      const res = await api(`/countries/${countryId}/timezones`, { method: 'GET' });
+      if (res.ok) {
+        const data = await res.json();
+        setTimezones(Array.isArray(data) ? data : []);
+      } else {
+        setTimezones([]);
+      }
+    } catch {
+      setTimezones([]);
+    } finally {
+      setTimezonesLoading(false);
+    }
+  }, []);
+
+  const selectedTimezone = useMemo(() => {
+    if (!selectedCountry?.hasMultipleTimezones || !countryTimezoneId || !timezones.length) return null;
+    return timezones.find((t) => t.id === countryTimezoneId) || null;
+  }, [selectedCountry, countryTimezoneId, timezones]);
+
+  const filteredCountries = useMemo(() => {
+    if (!search.trim()) return countries;
+    const q = search.trim().toLowerCase();
+    return countries.filter(
+      (c) =>
+        c.label?.toLowerCase().includes(q) ||
+        c.name?.toLowerCase().includes(q) ||
+        c.code?.toLowerCase().includes(q)
+    );
+  }, [countries, search]);
 
   const handleOpen = (e) => {
     setAnchorEl(e.currentTarget);
     setSearch('');
+    setMenuMode('countries');
+    setTimezoneCountry(null);
+    setTimezones([]);
   };
+
   const handleClose = () => {
     setAnchorEl(null);
     setSearch('');
+    setMenuMode('countries');
+    setTimezoneCountry(null);
+    setTimezones([]);
   };
-  const handleSelect = (val) => {
-    setCountry(val);
+
+  const handleSelectCountry = (c) => {
+    if (c.hasMultipleTimezones) {
+      setTimezoneCountry(c);
+      fetchTimezones(c.id);
+      setMenuMode('timezones');
+    } else {
+      setCountry(c.name);
+      setCountryTimezone(null);
+      handleClose();
+    }
+  };
+
+  const handleSelectTimezone = (tz) => {
+    if (timezoneCountry) {
+      setCountry(timezoneCountry.name);
+      setCountryTimezone(tz.id);
+    }
     handleClose();
   };
+
+  const handleBackToCountries = () => {
+    setMenuMode('countries');
+    setTimezoneCountry(null);
+    setTimezones([]);
+    setSearch('');
+  };
+
+  const currentLabel = selectedCountry
+    ? selectedCountry.hasMultipleTimezones && selectedTimezone
+      ? `${selectedCountry.code} ${selectedCountry.name} • ${selectedTimezone.cityName}`
+      : selectedCountry.label || `${selectedCountry.code} ${selectedCountry.name}`
+    : 'Select country';
 
   return (
     <>
@@ -107,24 +200,18 @@ export default function CountryToggle() {
             py: 0.8,
             fontSize: '12px',
             fontWeight: 700,
-            border: `1px solid ${
-              isDark ? 'rgba(255,255,255,0.18)' : '#e5e7eb'
-            }`,
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : '#e5e7eb'}`,
             color: theme.palette.text.primary,
             backgroundColor: isDark ? theme.palette.background.paper : '#fff',
-            boxShadow: isDark
-              ? '0 8px 20px rgba(0,0,0,0.55)'
-              : '0 6px 16px rgba(0, 0, 0, 0.08)',
+            boxShadow: isDark ? '0 8px 20px rgba(0,0,0,0.55)' : '0 6px 16px rgba(0, 0, 0, 0.08)',
             display: { xs: 'none', sm: 'inline-flex' },
             '&:hover': {
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.04)'
-                : '#f9fafb',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
             },
           };
         }}
       >
-        {current?.label ?? 'Select country'}
+        {currentLabel}
       </Button>
       <Menu
         anchorEl={anchorEl}
@@ -134,55 +221,118 @@ export default function CountryToggle() {
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         slotProps={{
           paper: {
-            sx: { mt: 1.5, minWidth: 220, maxHeight: 360, borderRadius: 2 },
+            sx: { mt: 1.5, minWidth: 260, maxHeight: 380, borderRadius: 2 },
           },
         }}
         MenuListProps={{ role: 'listbox' }}
       >
-        <Box sx={{ px: 1.5, pb: 1 }} onClick={(e) => e.stopPropagation()}>
-          <TextField
-            size="small"
-            placeholder="Search country…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 1,
-                fontSize: '0.875rem',
-              },
-            }}
-          />
-        </Box>
-        {filteredCountries.length === 0 ? (
-          <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-            No countries match
-          </MenuItem>
-        ) : (
-        filteredCountries.map((c) => (
-          <MenuItem
-            key={c.value}
-            selected={c.value === country}
-            onClick={() => handleSelect(c.value)}
-            sx={{ borderRadius: 1, mx: 0.5 }}
-          >
-            {c.value === country ? (
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <CheckIcon fontSize="small" color="primary" />
-              </ListItemIcon>
+        {menuMode === 'timezones' ? (
+          <>
+            <Box sx={{ px: 1.5, py: 0.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton size="small" onClick={handleBackToCountries} aria-label="Back to countries">
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
+              <Typography variant="subtitle2" color="text.secondary">
+                {timezoneCountry?.label ?? timezoneCountry?.name} – Select city / time zone
+              </Typography>
+            </Box>
+            {timezonesLoading ? (
+              <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : timezones.length === 0 ? (
+              <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                No cities configured. Add them in Admin → Countries.
+              </MenuItem>
             ) : (
-              <Box sx={{ width: 32 }} />
+              timezones.map((tz) => (
+                <MenuItem
+                  key={tz.id}
+                  selected={tz.id === countryTimezoneId}
+                  onClick={() => handleSelectTimezone(tz)}
+                  sx={{ borderRadius: 1, mx: 0.5 }}
+                >
+                  {tz.id === countryTimezoneId ? (
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <CheckIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                  ) : (
+                    <Box sx={{ width: 32 }} />
+                  )}
+                  <Box>
+                    <Typography variant="body2" fontWeight={500}>
+                      {tz.cityName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {tz.standardTime} ({tz.timeShort})
+                      {tz.countryCode ? ` · ${tz.countryCode}` : ''}
+                      {tz.currency ? ` · ${tz.currency}` : ''}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))
             )}
-            {c.label}
-          </MenuItem>
-        )))
-        }
+          </>
+        ) : (
+          <>
+            <Box sx={{ px: 1.5, pb: 1 }} onClick={(e) => e.stopPropagation()}>
+              <TextField
+                size="small"
+                placeholder="Search country…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': { borderRadius: 1, fontSize: '0.875rem' },
+                }}
+              />
+            </Box>
+            {filteredCountries.length === 0 ? (
+              <MenuItem disabled sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                No countries match
+              </MenuItem>
+            ) : (
+              filteredCountries.map((c) => (
+                <MenuItem
+                  key={c.id || c.code}
+                  selected={
+                    c.name === country &&
+                    (!c.hasMultipleTimezones ||
+                      (c.hasMultipleTimezones && Boolean(countryTimezoneId)))
+                  }
+                  onClick={() => handleSelectCountry(c)}
+                  sx={{ borderRadius: 1, mx: 0.5 }}
+                >
+                  {c.name === country &&
+                  (!c.hasMultipleTimezones ||
+                    (c.hasMultipleTimezones && Boolean(countryTimezoneId))) ? (
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <CheckIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                  ) : (
+                    <Box sx={{ width: 32 }} />
+                  )}
+                  <Box>
+                    <Typography variant="body2" fontWeight={500}>
+                      {c.label || `${c.code} ${c.name}`}
+                    </Typography>
+                    {c.hasMultipleTimezones && (
+                      <Typography variant="caption" color="text.secondary">
+                        Multiple time zones – select city
+                      </Typography>
+                    )}
+                  </Box>
+                </MenuItem>
+              ))
+            )}
+          </>
+        )}
       </Menu>
     </>
   );

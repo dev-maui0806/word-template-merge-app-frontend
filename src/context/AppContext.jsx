@@ -9,6 +9,7 @@ function loadPersisted() {
         eventType: parsed.eventType ?? '',
         imeSubType: parsed.imeSubType ?? '',
         country: parsed.country ?? 'India',
+        countryTimezoneId: parsed.countryTimezoneId ?? null,
         arrangeVenueData: {},
         trialStatus: null,
       };
@@ -20,6 +21,7 @@ function loadPersisted() {
     eventType: '',
     imeSubType: '',
     country: 'India',
+    countryTimezoneId: null,
     arrangeVenueData: {},
     trialStatus: null,
   };
@@ -36,7 +38,9 @@ function appReducer(state, action) {
     case 'SET_IME_SUB_TYPE':
       return { ...state, imeSubType: action.payload };
     case 'SET_COUNTRY':
-      return { ...state, country: action.payload };
+      return { ...state, country: action.payload, countryTimezoneId: null };
+    case 'SET_COUNTRY_TIMEZONE':
+      return { ...state, countryTimezoneId: action.payload };
     case 'UPDATE_ARRANGE_VENUE_FIELD':
       return {
         ...state,
@@ -65,12 +69,13 @@ export function AppProvider({ children }) {
           eventType: state.eventType,
           imeSubType: state.imeSubType,
           country: state.country,
+          countryTimezoneId: state.countryTimezoneId,
         })
       );
     } catch {
       // ignore
     }
-  }, [state.eventType, state.imeSubType, state.country]);
+  }, [state.eventType, state.imeSubType, state.country, state.countryTimezoneId]);
 
   const setEventType = useCallback((value) => {
     dispatch({ type: 'SET_EVENT_TYPE', payload: value });
@@ -82,6 +87,10 @@ export function AppProvider({ children }) {
 
   const setCountry = useCallback((value) => {
     dispatch({ type: 'SET_COUNTRY', payload: value });
+  }, []);
+
+  const setCountryTimezone = useCallback((timezoneId) => {
+    dispatch({ type: 'SET_COUNTRY_TIMEZONE', payload: timezoneId });
   }, []);
 
   const updateArrangeVenueField = useCallback((field, value) => {
@@ -108,6 +117,7 @@ export function AppProvider({ children }) {
     setEventType,
     setImeSubType,
     setCountry,
+    setCountryTimezone,
     updateArrangeVenueField,
     setArrangeVenueData,
     setTrialStatus,

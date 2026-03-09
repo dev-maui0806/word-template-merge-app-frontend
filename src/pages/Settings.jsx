@@ -28,7 +28,6 @@ const PLANS = [
   {
     id: 'monthly',
     name: 'Monthly',
-    price: '₹799',
     description: 'Perfect for short-term or trial usage.',
     tag: 'Monthly billing',
     highlight: false,
@@ -36,7 +35,6 @@ const PLANS = [
   {
     id: 'quarterly',
     name: 'Quarterly',
-    price: '₹2,099',
     description: 'Better value for regular case work.',
     tag: 'Save vs monthly',
     highlight: false,
@@ -44,7 +42,6 @@ const PLANS = [
   {
     id: 'yearly',
     name: 'Yearly',
-    price: '₹6,999',
     description: 'Best value with up to 14 months access.',
     tag: 'Limited-time offer',
     highlight: true,
@@ -146,10 +143,54 @@ function SubscriptionSection() {
   const { refreshUser } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [error, setError] = useState('');
+  const [serverPlans, setServerPlans] = useState([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [priceError, setPriceError] = useState('');
 
   useEffect(() => {
     refreshUser?.();
   }, [refreshUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchPlans = async () => {
+      setLoadingPrices(true);
+      setPriceError('');
+      try {
+        const res = await api('/payments/plans', { method: 'GET' });
+        if (!res.ok) throw new Error('Failed to load subscription prices');
+        const data = await res.json();
+        if (!cancelled) {
+          setServerPlans(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPriceError(err.message || 'Failed to load subscription prices');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPrices(false);
+        }
+      }
+    };
+    fetchPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const plansWithPrices = PLANS.map((plan) => {
+    const match = serverPlans.find((p) => p.id === plan.id);
+    const amount = match?.amountRupees;
+    const price =
+      typeof amount === 'number' && Number.isFinite(amount)
+        ? `₹${amount.toLocaleString('en-IN')}`
+        : undefined;
+    return {
+      ...plan,
+      price,
+    };
+  });
 
   const handlePlanClick = async (planId) => {
     setError('');
@@ -228,6 +269,11 @@ function SubscriptionSection() {
             {error}
           </Alert>
         )}
+        {priceError && (
+          <Alert severity="warning" onClose={() => setPriceError('')} sx={{ mb: 1 }}>
+            {priceError}
+          </Alert>
+        )}
 
         <Box
           sx={{
@@ -239,7 +285,7 @@ function SubscriptionSection() {
             gap: 2,
           }}
         >
-          {PLANS.map((plan) => (
+          {plansWithPrices.map((plan) => (
             <Card
               key={plan.id}
               variant="outlined"
@@ -266,7 +312,7 @@ function SubscriptionSection() {
                     {plan.name}
                   </Typography>
                   <Typography variant="h6" color="primary">
-                    {plan.price}
+                    {plan.price || (loadingPrices ? 'Loading…' : '—')}
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>

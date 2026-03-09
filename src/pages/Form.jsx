@@ -108,7 +108,7 @@ function slugToTitle(slug) {
 export default function Form() {
   const { actionSlug } = useParams();
   const navigate = useNavigate();
-  const { country, getEventTypeForBackend } = useApp();
+  const { country, countryTimezoneId, getEventTypeForBackend } = useApp();
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
   const [metaError, setMetaError] = useState('');
@@ -227,6 +227,7 @@ export default function Form() {
     // Always include Country and Event_Type for all action types
     // These come from AppContext, not form inputs - ensure they override any form data
     payload.Country = country;
+    if (countryTimezoneId) payload.CountryTimezoneId = countryTimezoneId;
     payload.Event_Type = getEventTypeForBackend();
     if (Object.keys(images).length) payload.images = images;
     if (Object.keys(imageLayout).length) {
@@ -241,7 +242,7 @@ export default function Form() {
       if (Object.keys(out).length) payload.imageLayout = out;
     }
     return payload;
-  }, [data, images, imageLayout, country, getEventTypeForBackend]);
+  }, [data, images, imageLayout, country, countryTimezoneId, getEventTypeForBackend]);
 
   const handleGenerate = async () => {
     setError('');

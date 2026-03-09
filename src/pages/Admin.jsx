@@ -30,6 +30,8 @@ import {
   ListItemText,
   Toolbar,
   Slider,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -41,6 +43,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import PublicIcon from '@mui/icons-material/Public';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import HistoryIcon from '@mui/icons-material/History';
+import LocationCityIcon from '@mui/icons-material/LocationCity';
 import CloseIcon from '@mui/icons-material/Close';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -79,6 +82,7 @@ export default function Admin() {
   const [templates, setTemplates] = useState([]);
   const [countries, setCountries] = useState([]);
   const [users, setUsers] = useState([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(null);
@@ -88,6 +92,7 @@ export default function Admin() {
     name: '',
     code: '',
     label: '',
+    hasMultipleTimezones: false,
     standardTime: '',
     countryCode: '',
     timeShort: '',
@@ -95,7 +100,22 @@ export default function Admin() {
     order: 0,
   });
   const [editingCountry, setEditingCountry] = useState(null);
+  const [countryTimezones, setCountryTimezones] = useState([]);
   const [savingCountry, setSavingCountry] = useState(false);
+  const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
+  const [timezoneForm, setTimezoneForm] = useState({
+    cityName: '',
+    standardTime: '',
+    timeShort: '',
+    countryCode: '',
+    currency: '',
+  });
+  const [editingTimezoneId, setEditingTimezoneId] = useState(null);
+  const [savingTimezone, setSavingTimezone] = useState(false);
+  const [viewTimezonesOpen, setViewTimezonesOpen] = useState(false);
+  const [viewTimezonesCountry, setViewTimezonesCountry] = useState(null);
+  const [viewTimezones, setViewTimezones] = useState([]);
+  const [viewTimezonesLoading, setViewTimezonesLoading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorActionSlug, setEditorActionSlug] = useState(null);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -111,6 +131,19 @@ export default function Admin() {
   const [previewError, setPreviewError] = useState('');
   const [zoomPercent, setZoomPercent] = useState(100);
   const docxContainerRef = useRef(null);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+
+  const fetchSubscriptionPlans = useCallback(async () => {
+    try {
+      const res = await api('/admin/subscription/plans', { method: 'GET' });
+      if (!res.ok) throw new Error('Failed to load subscription plans');
+      const data = await res.json();
+      setSubscriptionPlans(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -152,8 +185,19 @@ export default function Admin() {
   useEffect(() => {
     setLoading(true);
     setError('');
-    Promise.all([fetchTemplates(), fetchCountries(), fetchUsers()]).finally(() => setLoading(false));
-  }, [fetchTemplates, fetchCountries, fetchUsers]);
+    Promise.all([fetchTemplates(), fetchCountries(), fetchUsers(), fetchSubscriptionPlans()]).finally(() =>
+      setLoading(false)
+    );
+  }, [fetchTemplates, fetchCountries, fetchUsers, fetchSubscriptionPlans]);
+
+  useEffect(() => {
+    if (countryDialog && editingCountry) {
+      api(`/countries/${editingCountry}/timezones`, { method: 'GET' })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setCountryTimezones(Array.isArray(data) ? data : []))
+        .catch(() => setCountryTimezones([]));
+    }
+  }, [countryDialog, editingCountry]);
 
   const handleUpload = async (actionSlug, fileInput) => {
     const file = fileInput?.files?.[0];
@@ -211,18 +255,22 @@ export default function Admin() {
         name: country.name,
         code: country.code,
         label: country.label,
-        standardTime: country.standardTime,
-        countryCode: country.countryCode,
-        timeShort: country.timeShort,
-        currency: country.currency,
+        hasMultipleTimezones: Boolean(country.hasMultipleTimezones),
+        standardTime: country.standardTime ?? '',
+        countryCode: country.countryCode ?? '',
+        timeShort: country.timeShort ?? '',
+        currency: country.currency ?? '',
         order: country.order ?? 0,
       });
+      setCountryTimezones([]);
     } else {
       setEditingCountry(null);
+      setCountryTimezones([]);
       setCountryForm({
         name: '',
         code: '',
         label: '',
+        hasMultipleTimezones: false,
         standardTime: '',
         countryCode: '',
         timeShort: '',
@@ -233,7 +281,44 @@ export default function Admin() {
     setCountryDialog(true);
   };
 
+  const fetchCountryTimezones = useCallback(async () => {
+    if (!editingCountry) return;
+    try {
+      const res = await api(`/countries/${editingCountry}/timezones`, { method: 'GET' });
+      if (res.ok) {
+        const data = await res.json();
+        setCountryTimezones(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      setCountryTimezones([]);
+    }
+  }, [editingCountry]);
+
+  const openViewTimezones = async (country) => {
+    setViewTimezonesCountry(country);
+    setViewTimezonesOpen(true);
+    setViewTimezones([]);
+    setViewTimezonesLoading(true);
+    try {
+      const res = await api(`/countries/${country.id}/timezones`, { method: 'GET' });
+      if (!res.ok) {
+        setViewTimezones([]);
+        return;
+      }
+      const data = await res.json();
+      setViewTimezones(Array.isArray(data) ? data : []);
+    } catch {
+      setViewTimezones([]);
+    } finally {
+      setViewTimezonesLoading(false);
+    }
+  };
+
   const handleSaveCountry = async () => {
+    if (!countryForm.hasMultipleTimezones && (!countryForm.standardTime || !countryForm.countryCode || !countryForm.timeShort || !countryForm.currency)) {
+      setError('Single time zone country requires Time, Phone, Time Short, and Currency.');
+      return;
+    }
     setSavingCountry(true);
     setError('');
     try {
@@ -242,20 +327,108 @@ export default function Admin() {
           method: 'PATCH',
           body: JSON.stringify(countryForm),
         });
-        if (!res.ok) throw new Error('Update failed');
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Update failed');
+        }
+        setCountryDialog(false);
+        await fetchCountries();
       } else {
         const res = await api('/admin/countries', {
           method: 'POST',
           body: JSON.stringify(countryForm),
         });
-        if (!res.ok) throw new Error('Create failed');
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Create failed');
+        }
+        const created = await res.json();
+        if (created.id && countryForm.hasMultipleTimezones) {
+          setEditingCountry(created.id);
+          setCountryForm((prev) => ({ ...prev, ...created }));
+          setCountryTimezones([]);
+        } else {
+          setCountryDialog(false);
+          await fetchCountries();
+        }
       }
-      setCountryDialog(false);
-      await fetchCountries();
     } catch (err) {
       setError(err.message);
     } finally {
       setSavingCountry(false);
+    }
+  };
+
+  const openTimezoneDialog = (tz = null) => {
+    if (tz) {
+      setEditingTimezoneId(tz.id);
+      setTimezoneForm({
+        cityName: tz.cityName ?? '',
+        standardTime: tz.standardTime ?? '',
+        timeShort: tz.timeShort ?? '',
+        countryCode: tz.countryCode ?? '',
+        currency: tz.currency ?? '',
+      });
+    } else {
+      setEditingTimezoneId(null);
+      setTimezoneForm({
+        cityName: '',
+        standardTime: '',
+        timeShort: '',
+        countryCode: countryForm.countryCode ?? '',
+        currency: countryForm.currency ?? '',
+      });
+    }
+    setTimezoneDialogOpen(true);
+  };
+
+  const handleSaveTimezone = async () => {
+    if (!editingCountry || (!timezoneForm.cityName || !timezoneForm.standardTime || !timezoneForm.timeShort)) {
+      setError('City name, standard time, and time short are required.');
+      return;
+    }
+    setSavingTimezone(true);
+    setError('');
+    try {
+      if (editingTimezoneId) {
+        const res = await api(`/admin/countries/${editingCountry}/timezones/${editingTimezoneId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(timezoneForm),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Update failed');
+        }
+      } else {
+        const res = await api(`/admin/countries/${editingCountry}/timezones`, {
+          method: 'POST',
+          body: JSON.stringify(timezoneForm),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Create failed');
+        }
+      }
+      await fetchCountryTimezones();
+      setTimezoneDialogOpen(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingTimezone(false);
+    }
+  };
+
+  const handleDeleteTimezone = async (timezoneId) => {
+    if (!editingCountry || !window.confirm('Remove this city/time zone?')) return;
+    setError('');
+    try {
+      const res = await api(`/admin/countries/${editingCountry}/timezones/${timezoneId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      await fetchCountryTimezones();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -434,10 +607,11 @@ export default function Admin() {
             '& .Mui-selected': { color: 'white', fontWeight: 600 },
             '& .MuiTabs-indicator': { bgcolor: '#818cf8' },
           }}
-        >
+          >
           <Tab icon={<DescriptionIcon />} iconPosition="start" label="Templates" />
           <Tab icon={<PublicIcon />} iconPosition="start" label="Countries" />
           <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Users" />
+          <Tab icon={<HistoryIcon />} iconPosition="start" label="Subscription" />
         </Tabs>
       </Box>
 
@@ -565,7 +739,31 @@ export default function Admin() {
         ) : tab === 1 ? (
           /* Countries */
           <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+                gap: 2,
+                flexWrap: 'wrap',
+              }}
+            >
+              <TextField
+                size="small"
+                placeholder="Search countries…"
+                value={countrySearch}
+                onChange={(e) => setCountrySearch(e.target.value)}
+                sx={{
+                  maxWidth: 320,
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.25)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' },
+                }}
+              />
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -601,13 +799,45 @@ export default function Admin() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {countries.map((c) => (
+                  {countries
+                    .filter((c) => {
+                      if (!countrySearch.trim()) return true;
+                      const q = countrySearch.trim().toLowerCase();
+                      return (
+                        c.name?.toLowerCase().includes(q) ||
+                        c.code?.toLowerCase().includes(q) ||
+                        c.currency?.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((c) => (
                     <TableRow key={c.id} sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                       <TableCell sx={{ color: 'white' }}>{c.name}</TableCell>
                       <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.code}</TableCell>
-                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.timeShort}</TableCell>
-                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.countryCode}</TableCell>
-                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.currency}</TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                        {c.hasMultipleTimezones ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}
+                            >
+                              Multiple
+                            </Typography>
+                            <Tooltip title="View cities and time zones">
+                              <IconButton
+                                size="small"
+                                sx={{ color: '#a5b4fc' }}
+                                onClick={() => openViewTimezones(c)}
+                              >
+                                <LocationCityIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        ) : (
+                          c.timeShort ?? '—'
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.countryCode ?? '—'}</TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.currency ?? '—'}</TableCell>
                       <TableCell align="right">
                         <IconButton size="small" onClick={() => openCountryDialog(c)} sx={{ color: '#818cf8' }}>
                           <EditIcon fontSize="small" />
@@ -622,10 +852,10 @@ export default function Admin() {
               </Table>
             </TableContainer>
           </Box>
-        ) : (
+        ) : tab === 2 ? (
           /* Users */
           <Box>
-            {usersLoading ? (
+                {usersLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                 <CircularProgress sx={{ color: 'white' }} />
               </Box>
@@ -643,6 +873,31 @@ export default function Admin() {
                   overflow: 'hidden',
                 }}
               >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    px: 2,
+                    pt: 1.5,
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    placeholder="Search users…"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    sx={{
+                      maxWidth: 320,
+                      '& .MuiOutlinedInput-root': {
+                        color: 'white',
+                        '& fieldset': { borderColor: 'rgba(255,255,255,0.25)' },
+                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                      },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' },
+                    }}
+                  />
+                </Box>
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
@@ -658,7 +913,17 @@ export default function Admin() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {users.map((u) => (
+                    {users
+                      .filter((u) => {
+                        if (!userSearch.trim()) return true;
+                        const q = userSearch.trim().toLowerCase();
+                        return (
+                          u.email?.toLowerCase().includes(q) ||
+                          u.name?.toLowerCase().includes(q) ||
+                          u.role?.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((u) => (
                       <TableRow key={u.id} sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                         <TableCell sx={{ color: 'white' }}>{u.email}</TableCell>
                         <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{u.name || '—'}</TableCell>
@@ -691,6 +956,49 @@ export default function Admin() {
               </TableContainer>
             )}
           </Box>
+        ) : (
+          /* Subscription plans */
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Subscription plans
+            </Typography>
+            <Typography variant="body2" color="rgba(255,255,255,0.7)" sx={{ mb: 3 }}>
+              Update the subscription price for each plan. Changes apply to new PhonePe checkouts immediately.
+            </Typography>
+            <TableContainer
+              component={Paper}
+              sx={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Plan</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Duration (months)</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Current price (₹)</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Default price (₹)</TableCell>
+                    <TableCell align="right" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {subscriptionPlans.map((plan) => (
+                    <SubscriptionPlanRow
+                      key={plan.id}
+                      plan={plan}
+                      onUpdated={fetchSubscriptionPlans}
+                      setError={setError}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
         )}
       </Box>
 
@@ -713,29 +1021,126 @@ export default function Admin() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            {['name', 'code', 'label', 'standardTime', 'countryCode', 'timeShort', 'currency', 'order'].map(
-              (key) => (
-                <TextField
-                  key={key}
-                  label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
-                  value={countryForm[key] ?? ''}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={Boolean(countryForm.hasMultipleTimezones)}
                   onChange={(e) =>
-                    setCountryForm((prev) => ({
-                      ...prev,
-                      [key]: key === 'order' ? Number(e.target.value) || 0 : e.target.value,
-                    }))
+                    setCountryForm((prev) => ({ ...prev, hasMultipleTimezones: e.target.checked }))
                   }
-                  size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: 'white',
-                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
-                    },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-                  }}
+                  sx={{ color: 'rgba(255,255,255,0.7)', '&.Mui-checked': { color: '#818cf8' } }}
                 />
-              )
+              }
+              label={
+                <Typography sx={{ color: 'rgba(255,255,255,0.9)' }}>
+                  Has multiple time zones (show city dropdown)
+                </Typography>
+              }
+            />
+            {['name', 'code', 'label'].map((key) => (
+              <TextField
+                key={key}
+                label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}
+                value={countryForm[key] ?? ''}
+                onChange={(e) =>
+                  setCountryForm((prev) => ({
+                    ...prev,
+                    [key]: e.target.value,
+                  }))
+                }
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                }}
+              />
+            ))}
+            {(!countryForm.hasMultipleTimezones || editingCountry) && (
+              <>
+                {['standardTime', 'countryCode', 'timeShort', 'currency', 'order'].map((key) => (
+                  <TextField
+                    key={key}
+                    label={
+                      key === 'standardTime'
+                        ? 'Time (e.g. India Standard Time)'
+                        : key === 'countryCode'
+                          ? 'Phone'
+                          : key === 'timeShort'
+                            ? 'Time short (e.g. IST)'
+                            : key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())
+                    }
+                    value={countryForm[key] ?? ''}
+                    onChange={(e) =>
+                      setCountryForm((prev) => ({
+                        ...prev,
+                        [key]: key === 'order' ? Number(e.target.value) || 0 : e.target.value,
+                      }))
+                    }
+                    size="small"
+                    placeholder={countryForm.hasMultipleTimezones ? 'Default (optional)' : undefined}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: 'white',
+                        '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
+                      },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    }}
+                  />
+                ))}
+              </>
+            )}
+            {countryForm.hasMultipleTimezones && editingCountry && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 1 }}>
+                  City / Time zones
+                </Typography>
+                <TableContainer component={Paper} sx={{ background: 'rgba(0,0,0,0.2)', borderRadius: 1, mb: 1 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>City</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>Time</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>Short</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>Phone</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>Currency</TableCell>
+                        <TableCell align="right" sx={{ color: 'rgba(255,255,255,0.8)' }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {countryTimezones.map((tz) => (
+                        <TableRow key={tz.id}>
+                          <TableCell sx={{ color: 'white' }}>{tz.cityName}</TableCell>
+                          <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.standardTime}</TableCell>
+                          <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.timeShort}</TableCell>
+                          <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.countryCode ?? '—'}</TableCell>
+                          <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.currency ?? '—'}</TableCell>
+                          <TableCell align="right">
+                            <IconButton size="small" onClick={() => openTimezoneDialog(tz)} sx={{ color: '#a78bfa' }}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={() => handleDeleteTimezone(tz.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => openTimezoneDialog()}
+                  sx={{ color: '#818cf8' }}
+                >
+                  Add city / time zone
+                </Button>
+              </Box>
             )}
           </Box>
         </DialogContent>
@@ -746,7 +1151,13 @@ export default function Admin() {
           <Button
             variant="contained"
             onClick={handleSaveCountry}
-            disabled={savingCountry || !countryForm.name || !countryForm.code}
+            disabled={
+              savingCountry ||
+              !countryForm.name ||
+              !countryForm.code ||
+              (!countryForm.hasMultipleTimezones &&
+                (!countryForm.standardTime || !countryForm.countryCode || !countryForm.timeShort || !countryForm.currency))
+            }
             sx={{
               background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
@@ -755,6 +1166,137 @@ export default function Admin() {
             {savingCountry ? <CircularProgress size={20} color="inherit" /> : 'Save'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Timezone (city) dialog for multi-TZ countries */}
+      <Dialog
+        open={timezoneDialogOpen}
+        onClose={() => setTimezoneDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: 'white' }}>
+          {editingTimezoneId ? 'Edit city / time zone' : 'Add city / time zone'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {['cityName', 'standardTime', 'timeShort', 'countryCode', 'currency'].map((key) => (
+              <TextField
+                key={key}
+                label={
+                  key === 'cityName'
+                    ? 'City name'
+                    : key === 'standardTime'
+                      ? 'Time (e.g. Pacific Standard Time)'
+                      : key === 'timeShort'
+                        ? 'Time short (e.g. PST)'
+                        : key === 'countryCode'
+                          ? 'Phone'
+                          : 'Currency'
+                }
+                value={timezoneForm[key] ?? ''}
+                onChange={(e) =>
+                  setTimezoneForm((prev) => ({ ...prev, [key]: e.target.value }))
+                }
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                }}
+              />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setTimezoneDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveTimezone}
+            disabled={
+              savingTimezone ||
+              !timezoneForm.cityName ||
+              !timezoneForm.standardTime ||
+              !timezoneForm.timeShort
+            }
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
+            }}
+          >
+            {savingTimezone ? <CircularProgress size={20} color="inherit" /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View-only dialog for cities / time zones from the countries table */}
+      <Dialog
+        open={viewTimezonesOpen}
+        onClose={() => setViewTimezonesOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ color: 'white' }}>
+            {viewTimezonesCountry ? `Cities – ${viewTimezonesCountry.name}` : 'Cities & time zones'}
+          </Typography>
+          <IconButton onClick={() => setViewTimezonesOpen(false)} size="small" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {viewTimezonesLoading ? (
+            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : viewTimezones.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+              No cities configured yet for this country.
+            </Typography>
+          ) : (
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>City</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Time</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Short</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Phone</TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Currency</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {viewTimezones.map((tz) => (
+                  <TableRow key={tz.id}>
+                    <TableCell sx={{ color: 'white' }}>{tz.cityName}</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.standardTime}</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.timeShort}</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.countryCode ?? '—'}</TableCell>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.85)' }}>{tz.currency ?? '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
       </Dialog>
 
       {/* User documents list dialog */}
@@ -943,5 +1485,79 @@ export default function Admin() {
         onSaved={fetchTemplates}
       />
     </Box>
+  );
+}
+
+function SubscriptionPlanRow({ plan, onUpdated, setError }) {
+  const [value, setValue] = useState(plan.amountRupees ?? plan.defaultAmountRupees ?? 0);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError('Please enter a valid positive price.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const res = await api(`/admin/subscription/plans/${plan.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ amountRupees: parsed }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update subscription plan');
+      }
+      await onUpdated?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <TableRow sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <TableCell sx={{ color: 'white', textTransform: 'capitalize' }}>{plan.name}</TableCell>
+      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{plan.months}</TableCell>
+      <TableCell sx={{ color: 'rgba(255,255,255,0.9)' }}>
+        <TextField
+          size="small"
+          type="number"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          inputProps={{ min: 1 }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              color: 'white',
+              '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+              '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.6)' },
+            },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+            width: 140,
+          }}
+        />
+      </TableCell>
+      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>
+        {plan.defaultAmountRupees ? plan.defaultAmountRupees.toLocaleString('en-IN') : '—'}
+      </TableCell>
+      <TableCell align="right">
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleSave}
+          disabled={saving}
+          sx={{
+            textTransform: 'none',
+            borderRadius: 999,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
+          }}
+        >
+          {saving ? <CircularProgress size={18} color="inherit" /> : 'Save'}
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }

@@ -1,25 +1,78 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Button, Card, CardContent, Typography, Container, Alert } from '@mui/material';
 import Header from '../components/Header.jsx';
 import { api } from '../api/client.js';
 
-function usePlan() {
-  const params = new URLSearchParams(useLocation().search);
-  const plan = params.get('plan') || 'monthly';
-  const details = {
-    monthly: { id: 'monthly', name: 'Monthly', price: '₹799' },
-    quarterly: { id: 'quarterly', name: 'Quarterly', price: '₹2,099' },
-    yearly: { id: 'yearly', name: 'Yearly', price: '₹6,999' },
-  }[plan] || { name: 'Monthly', price: '₹799' };
-  return details;
-}
+const FALLBACK_PLANS = {
+  monthly: { id: 'monthly', name: 'Monthly', amountRupees: 799 },
+  quarterly: { id: 'quarterly', name: 'Quarterly', amountRupees: 2099 },
+  yearly: { id: 'yearly', name: 'Yearly', amountRupees: 6999 },
+};
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { id: planId, name, price } = usePlan();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const planParam = params.get('plan') || 'monthly';
+
+  const [plans, setPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchPlans = async () => {
+      setLoadingPlans(true);
+      try {
+        const res = await api('/payments/plans', { method: 'GET' });
+        if (!res.ok) throw new Error('Failed to load subscription prices');
+        const data = await res.json();
+        if (!cancelled) {
+          setPlans(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        // Fallback to static prices if API fails; PhonePe will still use DB prices
+        if (!cancelled) {
+          setPlans([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPlans(false);
+        }
+      }
+    };
+    fetchPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedPlan = useMemo(() => {
+    const fromServer = plans.find((p) => p.id === planParam);
+    if (fromServer) {
+      const price =
+        typeof fromServer.amountRupees === 'number' && Number.isFinite(fromServer.amountRupees)
+          ? `₹${fromServer.amountRupees.toLocaleString('en-IN')}`
+          : undefined;
+      return {
+        id: fromServer.id,
+        name: fromServer.name,
+        price,
+      };
+    }
+    const fallback = FALLBACK_PLANS[planParam] || FALLBACK_PLANS.monthly;
+    return {
+      id: fallback.id,
+      name: fallback.name,
+      price: `₹${fallback.amountRupees.toLocaleString('en-IN')}`,
+    };
+  }, [plans, planParam]);
+
+  const planId = selectedPlan.id;
+  const name = selectedPlan.name;
+  const price = selectedPlan.price;
 
   const canPay = useMemo(() => !!planId, [planId]);
 
@@ -56,7 +109,10 @@ export default function Checkout() {
               You&apos;re almost there. Confirm your subscription details and continue to payment.
             </Typography>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              Selected plan: <strong>{name}</strong> – <strong>{price}</strong>
+              Selected plan:{' '}
+              <strong>
+                {name} {price ? `– ${price}` : ''}
+              </strong>
             </Typography>
             {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
