@@ -764,6 +764,12 @@ export default function Admin() {
                   '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' },
                 }}
               />
+              <Typography
+                variant="body2"
+                sx={{ color: 'rgba(255,255,255,0.7)', flexGrow: 1, minWidth: 0 }}
+              >
+                Total countries: {countries.length}
+              </Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
