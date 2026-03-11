@@ -270,6 +270,37 @@ Srikakulam, Andhra Pradesh, India
 
 Email: [Insert Official Email]`,
 
+  'return_policy': `# RETURN POLICY
+
+**Effective Date: [Insert Effective Date]**
+
+This Return Policy applies to digital services/subscriptions offered through https://www.fieldagentreport.com (the "Platform").
+
+Because we provide **digital subscription access** (and not physical goods), there is **no return/shipping** process.
+
+---
+
+## 1. No Returns for Digital Subscriptions
+
+Subscriptions are not physical products and cannot be returned once access is granted.
+
+---
+
+## 2. Refunds
+
+Please refer to our Refund Policy for details:
+
+* https://www.fieldagentreport.com/refund-policy
+
+---
+
+## 3. Contact
+
+Rover Exim Sources
+4-99, budumuru, laveru, srikakulam, Andhra Pradesh, India
+
+Email: SUPPORT@DOMAIN.MAIL`,
+
   'terms-and-conditions': `# TERMS & CONDITIONS
 
 **Effective Date: [Insert Date]**

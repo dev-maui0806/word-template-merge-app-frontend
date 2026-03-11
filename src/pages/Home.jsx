@@ -10,6 +10,7 @@ import MiniCalendarWidget from '../components/MiniCalendarWidget.jsx';
 import NotesWidget from '../components/NotesWidget.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import SubscriptionBadge from '../components/SubscriptionBadge.jsx';
+import SiteFooter from '../components/SiteFooter.jsx';
 
 export default function Home() {
   const { user, refreshUser } = useAuth();
@@ -176,6 +177,7 @@ export default function Home() {
           <NotesWidget />
         </Box>
       </Container>
+      <SiteFooter />
     </Box>
   );
 }

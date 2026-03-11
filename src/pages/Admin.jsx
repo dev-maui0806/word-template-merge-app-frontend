@@ -794,6 +794,9 @@ export default function Admin() {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600, width: 60 }}>
+                      #
+                    </TableCell>
                     <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Name</TableCell>
                     <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Code</TableCell>
                     <TableCell sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Time</TableCell>
@@ -815,8 +818,10 @@ export default function Admin() {
                         c.currency?.toLowerCase().includes(q)
                       );
                     })
-                    .map((c) => (
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((c, index) => (
                     <TableRow key={c.id} sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{index + 1}</TableCell>
                       <TableCell sx={{ color: 'white' }}>{c.name}</TableCell>
                       <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>{c.code}</TableCell>
                       <TableCell sx={{ color: 'rgba(255,255,255,0.8)' }}>

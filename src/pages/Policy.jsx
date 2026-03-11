@@ -108,7 +108,13 @@ export default function Policy() {
         ? 'cookie_policy'
         : slug === 'Legal_Disclaimer'
           ? 'legal_disclaimer'
-          : slug;
+          : slug === 'privacy-policy'
+            ? 'privacy_policy'
+            : slug === 'refund-policy'
+              ? 'refund_policy'
+              : slug === 'return-policy'
+                ? 'return_policy'
+                : slug;
   const policy = POLICY_CONTENT[normalizedSlug];
 
   if (!policy) {
