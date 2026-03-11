@@ -267,7 +267,10 @@ export default function Form() {
       });
       if (!res.ok) {
         const d = await res.json();
-        if (d.code === 'TRIAL_LIMIT') throw new Error('Trial limit reached\nSubscribe to download complete DOCX documents.');
+        if (d.code === 'TRIAL_LIMIT') {
+          const reason = d.reason || 'Subscribe to download complete DOCX documents.';
+          throw new Error(`Trial limit reached. ${reason}`);
+        }
         throw new Error(d.error || 'Failed to generate');
       }
       const blob = await res.blob();

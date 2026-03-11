@@ -15,11 +15,14 @@ export default function Checkout() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const planParam = params.get('plan') || 'monthly';
+  const transactionId = params.get('transactionId') || '';
+  const isMockReturn = params.get('mock') === '1';
 
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +79,68 @@ export default function Checkout() {
 
   const canPay = useMemo(() => !!planId, [planId]);
 
+  const pollStatus = async (merchantOrderId) => {
+    const res = await api(`/payments/phonepe/order/${encodeURIComponent(merchantOrderId)}/status`, {
+      method: 'GET',
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || 'Failed to fetch payment status');
+    }
+    return await res.json();
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!transactionId) return;
+
+    const run = async () => {
+      try {
+        setError('');
+        setStatus('Verifying payment status…');
+        // Poll a few times; webhook can be slightly delayed.
+        for (let i = 0; i < 12 && !cancelled; i++) {
+          const d = await pollStatus(transactionId);
+          if (d.warning) {
+            setError('');
+            setStatus(d.warning);
+          }
+          if (d.status === 'SUCCESS') {
+            setStatus('Payment successful. Activating your subscription…');
+            setTimeout(() => {
+              if (!cancelled) navigate('/settings?payment=success', { replace: true });
+            }, 600);
+            return;
+          }
+          if (d.status === 'FAILED') {
+            setStatus('');
+            setError('Payment failed or was cancelled. Please try again.');
+            return;
+          }
+          // INITIATED / PENDING
+          if (!d.warning) {
+            setStatus('Payment pending. Waiting for confirmation…');
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        if (!cancelled) {
+          setStatus('');
+          setError('Payment is still pending. If you cancelled, you can safely retry.');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setStatus('');
+          setError('We couldn’t confirm the payment yet. If you cancelled, you can safely retry.');
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [transactionId, navigate]);
+
   const handlePay = async () => {
     if (!canPay) return;
     setError('');
@@ -98,6 +163,27 @@ export default function Checkout() {
     }
   };
 
+  const handleMockSettle = async (state) => {
+    if (!transactionId) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api('/payments/phonepe/mock/settle', {
+        method: 'POST',
+        body: JSON.stringify({ merchantOrderId: transactionId, state }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Mock settle failed');
+      }
+      // Trigger a status poll immediately.
+      setLoading(false);
+    } catch (e) {
+      setError(e.message || 'Mock settle failed');
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', pb: 4 }}>
       <Header />
@@ -114,19 +200,63 @@ export default function Checkout() {
                 {name} {price ? `– ${price}` : ''}
               </strong>
             </Typography>
+            {!!transactionId && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Order: <strong>{transactionId}</strong>
+              </Typography>
+            )}
+            {status && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {status}
+              </Alert>
+            )}
             {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="contained" color="primary" onClick={handlePay} disabled={loading}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handlePay}
+                disabled={loading || !!transactionId}
+              >
                 {loading ? 'Redirecting…' : 'Continue to PhonePe'}
               </Button>
               <Button variant="outlined" onClick={() => navigate('/settings')} disabled={loading}>
                 Back to settings
               </Button>
             </Box>
+
+            {isMockReturn && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Test mode
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  PhonePe KYC is pending. Use these buttons to simulate a callback.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={() => handleMockSettle('COMPLETED')}
+                    disabled={loading || !transactionId}
+                  >
+                    Simulate Success
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => handleMockSettle('FAILED')}
+                    disabled={loading || !transactionId}
+                  >
+                    Simulate Failure
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Container>

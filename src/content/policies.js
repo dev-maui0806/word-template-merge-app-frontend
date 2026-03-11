@@ -4,7 +4,7 @@
  */
 
 export const POLICY_CONTENT = {
-  'privacy_policy': `# PRIVACY POLICY
+  'privacy-policy': `# PRIVACY POLICY
 
 **Effective Date: [Insert Effective Date]**
 
@@ -155,7 +155,7 @@ Srikakulam, Andhra Pradesh, India
 
 Email: [Insert Official Email]`,
 
-  'refund_policy': `# REFUND & CANCELLATION POLICY
+  'refund-policy': `# REFUND & CANCELLATION POLICY
 
 **Effective Date: [Insert Effective Date]**
 
@@ -270,7 +270,7 @@ Srikakulam, Andhra Pradesh, India
 
 Email: [Insert Official Email]`,
 
-  'return_policy': `# RETURN POLICY
+  'return-policy': `# RETURN POLICY
 
 **Effective Date: [Insert Effective Date]**
 
@@ -586,7 +586,7 @@ Srikakulam, Andhra Pradesh, India
 
 Email: [Insert Official Email Address]`,
 
-  'cookie_policy': `# COOKIE POLICY
+  'cookie-policy': `# COOKIE POLICY
 
 **Effective Date: [Insert Effective Date]**
 

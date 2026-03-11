@@ -16,6 +16,7 @@ export default function Home() {
   const { user, refreshUser } = useAuth();
   const docCount = user?.trialDocCount ?? 0;
   const isTrial = user?.subscriptionStatus === 'trial';
+  const isAdminUser = user?.role === 'admin';
   const firstName =
     user?.name?.split(' ')[0] ||
     user?.email?.split('@')[0] ||
@@ -32,7 +33,7 @@ export default function Home() {
   }, [refreshUser]);
 
   let trialMessage = '';
-  if (isTrial) {
+  if (isTrial && !isAdminUser) {
     if (docCount === 1) {
       trialMessage =
         'You have generated your first document. You can generate up to 5 documents or use the app for 7 days before upgrading.';

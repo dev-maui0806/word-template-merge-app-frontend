@@ -21,6 +21,13 @@ function getBadgeConfig(user) {
     return null;
   }
 
+  if (user.role === 'admin') {
+    return {
+      label: 'Administrator',
+      color: 'primary',
+    };
+  }
+
   const { isTrialActive, docCount } = computeTrialState(user);
 
   if (user.subscriptionStatus === 'active') {
@@ -67,14 +74,18 @@ export default function SubscriptionBadge({ size = 'small' }) {
   const px = size === 'small' ? 1.5 : 2;
 
   const bgColor =
-    config.color === 'success'
+    config.color === 'primary'
+      ? 'primary.main'
+      : config.color === 'success'
       ? 'success.light'
       : config.color === 'warning'
       ? 'warning.light'
       : 'error.light';
 
   const textColor =
-    config.color === 'success'
+    config.color === 'primary'
+      ? 'primary.contrastText'
+      : config.color === 'success'
       ? 'success.dark'
       : config.color === 'warning'
       ? 'warning.dark'

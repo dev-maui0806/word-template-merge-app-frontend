@@ -105,15 +105,15 @@ export default function Policy() {
     slug === 'T&C' || slug === 'T%26C'
       ? 'terms-and-conditions'
       : slug === 'Cookie_Policy'
-        ? 'cookie_policy'
+        ? 'cookie-policy'
         : slug === 'Legal_Disclaimer'
-          ? 'legal_disclaimer'
+          ? 'legal-disclaimer'
           : slug === 'privacy-policy'
-            ? 'privacy_policy'
+            ? 'privacy-policy'
             : slug === 'refund-policy'
-              ? 'refund_policy'
+              ? 'refund-policy'
               : slug === 'return-policy'
-                ? 'return_policy'
+                ? 'return-policy'
                 : slug;
   const policy = POLICY_CONTENT[normalizedSlug];
 

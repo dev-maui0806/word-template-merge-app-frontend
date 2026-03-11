@@ -24,18 +24,16 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               {/* Policy routes - underscore & hyphen variants for PhonePe KYC URLs */}
-              <Route path="/privacy_policy" element={<Policy />} />
-              <Route path="/refund_policy" element={<Policy />} />
               <Route path="/terms-and-conditions" element={<Policy />} />
               <Route path="/privacy-policy" element={<Policy />} />
               <Route path="/refund-policy" element={<Policy />} />
               <Route path="/return-policy" element={<Policy />} />
               <Route path="/T&C" element={<Policy />} />
               <Route path="/T%26C" element={<Policy />} />
-              <Route path="/cookie_policy" element={<Policy />} />
-              <Route path="/Cookie_Policy" element={<Policy />} />
-              <Route path="/legal_disclaimer" element={<Policy />} />
-              <Route path="/Legal_Disclaimer" element={<Policy />} />
+              <Route path="/cookie-policy" element={<Policy />} />
+              <Route path="/Cookie-Policy" element={<Policy />} />
+              <Route path="/legal-disclaimer" element={<Policy />} />
+              <Route path="/Legal-Disclaimer" element={<Policy />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/arrange-venue" element={<Navigate to="/form/arrange-venue" replace />} />
               <Route
