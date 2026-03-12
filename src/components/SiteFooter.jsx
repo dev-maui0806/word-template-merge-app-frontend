@@ -20,6 +20,13 @@ const POLICY_LINKS = [
   { label: 'Return Policy', to: '/return-policy' },
 ];
 
+const PRODUCT_LINKS = [
+  { label: 'Features', to: '/' },
+  { label: 'Pricing', to: '/settings?section=subscription' },
+  { label: 'Tools', to: '/' },
+  { label: 'FAQ', to: '/contact' },
+];
+
 export default function SiteFooter() {
   return (
     <Box
@@ -48,7 +55,7 @@ export default function SiteFooter() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1.3fr' },
+            gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr 1.3fr' },
             gap: { xs: 3.5, md: 5 },
             alignItems: 'flex-start',
           }}
@@ -84,6 +91,28 @@ export default function SiteFooter() {
             >
               FieldAgentReport helps manage field investigation workflows and generate structured documentation.
             </Typography>
+          </Box>
+
+          <Box>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ letterSpacing: '0.16em', fontSize: 11 }}
+            >
+              Product
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+              {PRODUCT_LINKS.map((p) => (
+                <MuiLink
+                  key={p.to}
+                  component={RouterLink}
+                  to={p.to}
+                  underline="hover"
+                >
+                  {p.label}
+                </MuiLink>
+              ))}
+            </Box>
           </Box>
 
           <Box>

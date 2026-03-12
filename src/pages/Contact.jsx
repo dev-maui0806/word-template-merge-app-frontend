@@ -3,21 +3,70 @@ import {
   Container,
   Typography,
   Paper,
-  Divider,
   Link as MuiLink,
   TextField,
   Button,
   MenuItem,
   FormControlLabel,
   Checkbox,
+  Alert,
 } from '@mui/material';
 import Header from '../components/Header.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
+import { useState } from 'react';
+import { api } from '../api/client.js';
 
 const SUPPORT_EMAIL = 'Support@fieldagentreport.com';
 const ADDRESS = '4-99, budumuru, laveru, srikakulam, Andhra Pradesh, India';
 
 export default function Contact() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [regarding, setRegarding] = useState('');
+  const [message, setMessage] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!name.trim()) return setError('Please enter your name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Please enter a valid email address.');
+    if (message.trim().length < 10) return setError('Please enter a message (at least 10 characters).');
+    if (!acceptTerms) return setError('Please accept the Terms and Privacy Policy.');
+
+    setLoading(true);
+    try {
+      const res = await api('/support/contact', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          email,
+          regarding: regarding || 'other',
+          message,
+          acceptTerms,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to send message.');
+
+      setSuccess('Message sent successfully. Our support team will contact you shortly.');
+      setName('');
+      setEmail('');
+      setRegarding('');
+      setMessage('');
+      setAcceptTerms(false);
+    } catch (err) {
+      setError(err.message || 'Failed to send message.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -92,6 +141,7 @@ export default function Contact() {
             component="form"
             noValidate
             elevation={0}
+            onSubmit={handleSubmit}
             sx={(theme) => ({
               p: { xs: 3, sm: 4 },
               borderRadius: 1,
@@ -102,6 +152,16 @@ export default function Contact() {
                   : '0 18px 40px rgba(15,23,42,0.15)',
             })}
           >
+            {success && (
+              <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>
+                {success}
+              </Alert>
+            )}
+            {error && (
+              <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
             <Box
               sx={{
                 display: 'grid',
@@ -110,7 +170,15 @@ export default function Contact() {
                 mb: 2.5,
               }}
             >
-              <TextField required label="Your name" name="name" size="small" fullWidth />
+              <TextField
+                required
+                label="Your name"
+                name="name"
+                size="small"
+                fullWidth
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
               <TextField
                 required
                 label="Your email address"
@@ -118,6 +186,8 @@ export default function Contact() {
                 type="email"
                 size="small"
                 fullWidth
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </Box>
 
@@ -127,7 +197,8 @@ export default function Contact() {
               name="regarding"
               size="small"
               fullWidth
-              defaultValue=""
+              value={regarding}
+              onChange={(e) => setRegarding(e.target.value)}
               sx={{ mb: 2.5 }}
             >
               <MenuItem value="">Choose a topic…</MenuItem>
@@ -144,10 +215,19 @@ export default function Contact() {
               multiline
               minRows={4}
               sx={{ mb: 2.5 }}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
             />
 
             <FormControlLabel
-              control={<Checkbox size="small" color="primary" />}
+              control={
+                <Checkbox
+                  size="small"
+                  color="primary"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                />
+              }
               sx={{ alignItems: 'center', mb: 2.5 }}
               label={
                 <Typography variant="caption" color="text.secondary">
@@ -174,11 +254,13 @@ export default function Contact() {
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button
+                type="submit"
                 variant="contained"
                 color="error"
+                disabled={loading}
                 sx={{ px: 3.5, borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
               >
-                Send Message
+                {loading ? 'Sending…' : 'Send Message'}
               </Button>
             </Box>
           </Paper>

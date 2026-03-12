@@ -15,6 +15,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockIcon from '@mui/icons-material/Lock';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import SearchIcon from '@mui/icons-material/Search';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -47,9 +48,13 @@ export default function Header() {
 
   const handleMenu = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
-  const handleSettings = () => {
+  const handleProfile = () => {
     handleClose();
-    window.location.href = '/settings';
+    navigate('/settings?section=profile');
+  };
+  const handleSubscription = () => {
+    handleClose();
+    navigate('/settings?section=subscription');
   };
   const handleLogout = () => {
     handleClose();
@@ -429,9 +434,13 @@ export default function Header() {
                       Admin
                     </MenuItem>
                   )}
-                  <MenuItem onClick={handleSettings}>
+                  <MenuItem onClick={handleProfile}>
                     <PersonOutlineIcon sx={{ mr: 1.5, fontSize: 14 }} />
-                    Settings
+                    Profile
+                  </MenuItem>
+                  <MenuItem onClick={handleSubscription}>
+                    <CreditCardIcon sx={{ mr: 1.5, fontSize: 14 }} />
+                    Subscriptions & Pricing
                   </MenuItem>
                   <MenuItem onClick={handleLogout} sx={{ color: '#ef4444' }}>
                     <LockIcon sx={{ mr: 1.5, fontSize: 14 }} />

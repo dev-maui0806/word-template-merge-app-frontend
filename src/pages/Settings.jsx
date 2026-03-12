@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -49,7 +50,32 @@ const PLANS = [
 ];
 
 export default function Settings() {
-  const [active, setActive] = useState('profile');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Initialize active section from URL (?section=profile|subscription); default to profile.
+  const [active, setActive] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get('section');
+    return SECTIONS.some((s) => s.id === fromUrl) ? fromUrl : 'profile';
+  });
+
+  // One-way sync: when URL changes (e.g. user navigates from header),
+  // update local state but do NOT push a new URL from here (avoids loops).
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get('section');
+    if (fromUrl && SECTIONS.some((s) => s.id === fromUrl)) {
+      setActive(fromUrl);
+    }
+  }, [location.search]);
+
+  const handleSectionChange = (id) => {
+    setActive(id);
+    const params = new URLSearchParams(location.search);
+    params.set('section', id);
+    navigate({ pathname: '/settings', search: params.toString() }, { replace: true });
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', pb: 4, bgcolor: 'background.default' }}>
@@ -101,7 +127,7 @@ export default function Settings() {
                   <ListItemButton
                     key={s.id}
                     selected={s.id === active}
-                    onClick={() => setActive(s.id)}
+                    onClick={() => handleSectionChange(s.id)}
                     sx={{
                       borderRadius: 999,
                       mb: 0.75,
