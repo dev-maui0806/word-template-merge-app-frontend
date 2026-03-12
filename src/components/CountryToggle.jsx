@@ -56,7 +56,7 @@ const FALLBACK_COUNTRIES = [
   },
 ];
 
-export default function CountryToggle() {
+export default function CountryToggle({ compact = false }) {
   const { country, countryTimezoneId, setCountry, setCountryTimezone } = useApp();
   const [anchorEl, setAnchorEl] = useState(null);
   const [countries, setCountries] = useState([]);
@@ -185,33 +185,46 @@ export default function CountryToggle() {
         aria-expanded={open}
         startIcon={
           loading ? (
-            <CircularProgress size={18} color="inherit" />
+            <CircularProgress size={compact ? 16 : 18} color="inherit" />
           ) : (
-            <PublicIcon sx={{ fontSize: 18 }} />
+            <PublicIcon sx={{ fontSize: compact ? 18 : 18 }} />
           )
         }
-        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
+        endIcon={compact ? null : <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
         sx={(theme) => {
           const isDark = theme.palette.mode === 'dark';
-          return {
-            borderRadius: '20px',
+          const base = {
+            borderRadius: compact ? '50%' : '20px',
             textTransform: 'none',
-            px: 2,
-            py: 0.8,
+            px: compact ? 0.75 : 2,
+            py: compact ? 0.75 : 0.8,
+            minWidth: compact ? 0 : undefined,
             fontSize: '12px',
             fontWeight: 700,
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : '#e5e7eb'}`,
             color: theme.palette.text.primary,
             backgroundColor: isDark ? theme.palette.background.paper : '#fff',
             boxShadow: isDark ? '0 8px 20px rgba(0,0,0,0.55)' : '0 6px 16px rgba(0, 0, 0, 0.08)',
-            display: { xs: 'none', sm: 'inline-flex' },
             '&:hover': {
               backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
             },
           };
+          if (compact) {
+            return {
+              ...base,
+              display: 'inline-flex',
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+            };
+          }
+          return {
+            ...base,
+            display: { xs: 'none', sm: 'inline-flex' },
+          };
         }}
       >
-        {currentLabel}
+        {!compact && currentLabel}
       </Button>
       <Menu
         anchorEl={anchorEl}

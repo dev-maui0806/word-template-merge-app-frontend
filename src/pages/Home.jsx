@@ -64,10 +64,11 @@ export default function Home() {
         <Box
           sx={{
             display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 4,
-            mb: 5,
+            alignItems: { xs: 'flex-start', md: 'flex-start' },
+            gap: { xs: 3, md: 4 },
+            mb: { xs: 4, md: 5 },
           }}
         >
           {/* LEFT COLUMN: Greeting + Description */}
@@ -101,12 +102,12 @@ export default function Home() {
             {/* Greeting */}
             <Typography
               sx={{
-                fontSize: '52px',
+                fontSize: { xs: '2.4rem', sm: '3rem', md: '3.4rem' },
                 fontWeight: 700,
-                lineHeight: '59.8px',
+                lineHeight: { xs: '1.1', md: '1.15' },
                 // Adapt to theme text color (light/dark)
                 color: 'text.primary',
-                marginBottom: '16px',
+                marginBottom: { xs: 1.5, md: 2 },
               }}
             >
               {greeting}
@@ -127,10 +128,10 @@ export default function Home() {
             {/* Subtitle */}
             <Typography
               sx={{
-                fontSize: '15px',
+                fontSize: { xs: 13.5, sm: 14.5, md: 15 },
                 fontWeight: 500,
                 color: 'text.secondary',
-                marginBottom: '16px',
+                marginBottom: { xs: 1.5, md: 2 },
                 lineHeight: '24px',
               }}
             >
@@ -148,7 +149,12 @@ export default function Home() {
           </Box>
 
           {/* RIGHT COLUMN: Event Type Toggle */}
-          <Box sx={{ minWidth: { md: 420 } }}>
+          <Box
+            sx={{
+              minWidth: { md: 420 },
+              width: { xs: '100%', md: 'auto' },
+            }}
+          >
             <EventTypeToggle />
           </Box>
         </Box>

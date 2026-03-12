@@ -19,10 +19,12 @@ import {
   TextField,
   Typography,
   Alert,
+  IconButton,
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
 import Header from '../components/Header.jsx';
 import FormField from '../components/form/FormField.jsx';
 import { useApp } from '../context/AppContext.jsx';
@@ -684,24 +686,68 @@ export default function Form() {
           }}
           PaperProps={{ sx: { minHeight: '70vh' } }}
         >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 2, flexWrap: 'wrap', gap: 1 }}>
+          <DialogTitle
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              justifyContent: 'space-between',
+              pr: { xs: 4, sm: 6 },
+              pb: 1.5,
+              gap: 1,
+              position: 'relative',
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               Template Preview
               {previewEditing && (
                 <Chip label="Editing" color="primary" size="small" sx={{ fontWeight: 600 }} />
               )}
             </Box>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="outlined" color="error" size="small" onClick={handleDownloadTemplate} disabled={!previewBlob}>
-                Download Template
-              </Button>
-              <Button variant="outlined" size="small" onClick={handleDownloadEditedHtml} disabled={!previewHtml}>
-                Download Edited (HTML)
-              </Button>
-              <Button variant="contained" color="error" size="small" onClick={handleSaveAndDownload}>
-                Save and Download
-              </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: { xs: 0.5, sm: 0 } }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={handleDownloadTemplate}
+                  disabled={!previewBlob}
+                >
+                  Download Template
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleDownloadEditedHtml}
+                  disabled={!previewHtml}
+                >
+                  Download Edited (HTML)
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  onClick={handleSaveAndDownload}
+                >
+                  Save and Download
+                </Button>
+              </Box>
             </Box>
+            <IconButton
+              aria-label="Close preview"
+              size="small"
+              onClick={() => {
+                setPreviewOpen(false);
+                setPreviewEditing(false);
+              }}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
           </DialogTitle>
           <DialogContent dividers sx={{ bgcolor: 'grey.100' }}>
             <Box

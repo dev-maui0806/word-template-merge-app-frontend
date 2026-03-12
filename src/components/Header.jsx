@@ -20,6 +20,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useTheme as useAppTheme } from '../context/ThemeContext.jsx';
@@ -45,6 +46,8 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [contactsOpen, setContactsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [quickMenuEl, setQuickMenuEl] = useState(null);
+  const quickOpen = Boolean(quickMenuEl);
 
   const handleMenu = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
@@ -61,6 +64,9 @@ export default function Header() {
     logout();
     navigate('/auth/login', { replace: true });
   };
+
+  const handleQuickMenuOpen = (e) => setQuickMenuEl(e.currentTarget);
+  const handleQuickMenuClose = () => setQuickMenuEl(null);
 
   return (
     <>
@@ -91,7 +97,7 @@ export default function Header() {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2,
+              gap: { xs: 1.5, sm: 2 },
             }}
           >
             {/* Red Pill Icon – acts as a Home/Dashboard button */}
@@ -121,10 +127,10 @@ export default function Header() {
             </Box>
 
             {/* Logo Text */}
-            <Box>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Typography
                 sx={{
-                  fontSize: 30,
+                  fontSize: { xs: 22, sm: 26, md: 30 },
                   fontWeight: 500,
                   letterSpacing: '-0.75px',
                   lineHeight: '36px',
@@ -153,7 +159,7 @@ export default function Header() {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              gap: { xs: 0.5, sm: 1 },
               flex: 1,
               justifyContent: 'flex-end',
             }}
@@ -178,8 +184,8 @@ export default function Header() {
                     : '0 6px 16px rgba(0, 0, 0, 0.08)',
                   cursor: 'pointer',
                   transition: 'width 0.35s ease, padding 0.35s ease, background-color 0.2s ease',
-                  width: 44,
-                  height: 44,
+                  width: { xs: 40, sm: 44 },
+                  height: { xs: 40, sm: 44 },
                   '&:hover': {
                     backgroundColor: isDark
                       ? 'rgba(255,255,255,0.04)'
@@ -206,8 +212,8 @@ export default function Header() {
               sx={(theme) => {
                 const isDark = theme.palette.mode === 'dark';
                 return {
-                  width: 41,
-                  height: 41,
+                  width: { xs: 40, sm: 41 },
+                  height: { xs: 40, sm: 41 },
                   borderRadius: '15px',
                   backgroundColor: isDark ? theme.palette.background.paper : '#fff',
                   border: `1px solid ${
@@ -253,7 +259,7 @@ export default function Header() {
                     boxShadow: isDark
                       ? '0 8px 20px rgba(0,0,0,0.55)'
                       : '0 6px 16px rgba(0, 0, 0, 0.08)',
-                    display: { xs: 'none', sm: 'inline-flex' },
+                    display: { xs: 'none', md: 'inline-flex' },
                     '&:hover': {
                       backgroundColor: isDark
                         ? 'rgba(255,255,255,0.04)'
@@ -292,7 +298,7 @@ export default function Header() {
                     boxShadow: isDark
                       ? '0 8px 20px rgba(0,0,0,0.55)'
                       : '0 6px 16px rgba(0, 0, 0, 0.08)',
-                    display: { xs: 'none', sm: 'inline-flex' },
+                    display: { xs: 'none', md: 'inline-flex' },
                     '&:hover': {
                       backgroundColor: isDark
                         ? 'rgba(255,255,255,0.04)'
@@ -331,7 +337,7 @@ export default function Header() {
                     boxShadow: isDark
                       ? '0 8px 20px rgba(0,0,0,0.55)'
                       : '0 6px 16px rgba(0, 0, 0, 0.08)',
-                    display: { xs: 'none', sm: 'inline-flex' },
+                    display: { xs: 'none', md: 'inline-flex' },
                     '&:hover': {
                       backgroundColor: isDark
                         ? 'rgba(255,255,255,0.04)'
@@ -345,8 +351,38 @@ export default function Header() {
               </Button>
             )}
 
-            {/* Country Toggle */}
-            <CountryToggle />
+            {/* Country Toggle: full on tablet/desktop, compact icon on mobile */}
+            <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+              <CountryToggle />
+            </Box>
+            <Box sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
+              <CountryToggle compact />
+            </Box>
+
+            {/* Compact quick actions menu on mobile (excluding country which has its own icon) */}
+            {isAuthenticated && (
+              <IconButton
+                size="small"
+                onClick={handleQuickMenuOpen}
+                sx={(theme) => ({
+                  display: { xs: 'inline-flex', md: 'none' },
+                  width: 40,
+                  height: 40,
+                  borderRadius: '15px',
+                  backgroundColor: theme.palette.mode === 'dark'
+                    ? theme.palette.background.paper
+                    : '#fff',
+                  border: `1px solid ${
+                    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.14)' : '#e5e7eb'
+                  }`,
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? '0 8px 20px rgba(0,0,0,0.55)'
+                    : '0 6px 16px rgba(0, 0, 0, 0.08)',
+                })}
+              >
+                <MoreVertIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
 
             {/* User Profile */}
             {isAuthenticated && user ? (
@@ -468,6 +504,59 @@ export default function Header() {
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* Quick actions menu for mobile */}
+      <Menu
+        anchorEl={quickMenuEl}
+        open={quickOpen}
+        onClose={handleQuickMenuClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              minWidth: 180,
+              borderRadius: 1.5,
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e5e7eb',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleQuickMenuClose();
+            setContactsOpen(true);
+          }}
+        >
+          <ContactPhoneIcon sx={{ mr: 1.5, fontSize: 16 }} />
+          Contacts
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleQuickMenuClose();
+            setCalendarOpen(true);
+          }}
+        >
+          <CalendarMonthIcon sx={{ mr: 1.5, fontSize: 16 }} />
+          Calendar
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleQuickMenuClose();
+            setSearchOpen(true);
+          }}
+        >
+          <FolderOpenIcon sx={{ mr: 1.5, fontSize: 16 }} />
+          File Manager
+        </MenuItem>
+        {/* <MenuItem
+          onClick={() => {
+            handleQuickMenuClose();
+          }}
+        /> */}
+      </Menu>
 
       {/* Document history (generated DOCX) */}
       <DocumentHistoryDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
