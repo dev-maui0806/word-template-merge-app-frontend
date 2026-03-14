@@ -11,7 +11,7 @@ import YouTubeIcon from '@mui/icons-material/YouTube';
 
 const SUPPORT_EMAIL = 'Support@fieldagentreport.com';
 const ADDRESS = '4-99, budumuru, laveru, srikakulam, Andhra Pradesh, India';
-const PHONE_NUMBER = '+91 XXXXX XXXX';
+const PHONE_NUMBER = '+91 9398594347';
 
 const POLICY_LINKS = [
   { label: 'Terms & Conditions', to: '/terms-and-conditions' },

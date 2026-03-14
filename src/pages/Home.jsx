@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Container, Typography, Alert } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Header from '../components/Header.jsx';
@@ -12,21 +12,74 @@ import { useAuth } from '../context/AuthContext.jsx';
 import SubscriptionBadge from '../components/SubscriptionBadge.jsx';
 import SiteFooter from '../components/SiteFooter.jsx';
 
+import { useApp } from '../context/AppContext.jsx';
+import { api } from '../api/client.js';
+
 export default function Home() {
   const { user, refreshUser } = useAuth();
+  const { country, countryTimezoneId } = useApp();
+  const [timeData, setTimeData] = useState(null);
+  const [timeError, setTimeError] = useState('');
   const docCount = user?.trialDocCount ?? 0;
   const isTrial = user?.subscriptionStatus === 'trial';
   const isAdminUser = user?.role === 'admin';
-  const firstName =
-    user?.name?.split(' ')[0] ||
-    user?.email?.split('@')[0] ||
+  const displayName =
+    (user?.name && String(user.name).trim()) ||
+    (user?.email && String(user.email).trim()) ||
     'there';
 
-  const hour = dayjs().hour();
-  const greeting =
-    hour < 12 ? 'Good Morning,' :
-    hour < 18 ? 'Good Afternoon,' :
-    'Good Evening,';
+  useEffect(() => {
+    if (!country) return;
+    let cancelled = false;
+    setTimeError('');
+
+    const loadTime = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set('country', country);
+        if (countryTimezoneId) params.set('timezoneId', countryTimezoneId);
+
+        const res = await api(`/countries/current-time?${params.toString()}`, { method: 'GET' });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || 'Failed to load time');
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setTimeData(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTimeError(err.message || 'Failed to load time');
+          setTimeData(null);
+        }
+      }
+    };
+
+    loadTime();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [country, countryTimezoneId]);
+
+  const { greeting, formattedDate } = useMemo(() => {
+    if (timeData?.ok) {
+      return {
+        greeting: timeData.greeting,
+        formattedDate: timeData.formattedDate,
+      };
+    }
+    const fallbackNow = new Date();
+    return {
+      greeting: fallbackNow.getHours() < 12
+        ? 'Good Morning,'
+        : fallbackNow.getHours() < 18
+        ? 'Good Afternoon,'
+        : 'Good Evening,',
+      formattedDate: dayjs(fallbackNow).format('dddd, D MMMM YYYY'),
+    };
+  }, [timeData]);
 
   useEffect(() => {
     refreshUser?.();
@@ -96,7 +149,7 @@ export default function Home() {
               })}
             >
               <CalendarMonthIcon sx={{ fontSize: 10 }} />
-              {dayjs().format('dddd, D MMMM YYYY')}
+              {formattedDate}
             </Box>
 
             {/* Greeting */}
@@ -121,7 +174,7 @@ export default function Home() {
                   fontWeight: 700,
                 }}
               >
-                {firstName}
+                {displayName}
               </span>
             </Typography>
 

@@ -305,8 +305,11 @@ function SubscriptionSection() {
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-            gap: 2.5,
-            mt: 1,
+            height:'calc(100vh - 510px)',
+            alignItems:'space-between',
+            justifyContent:'space-between',
+            gap: 2,
+           
           }}
         >
           {plansWithPrices.map((plan) => (

@@ -18,6 +18,7 @@ import { api } from '../api/client.js';
 
 const SUPPORT_EMAIL = 'Support@fieldagentreport.com';
 const ADDRESS = '4-99, budumuru, laveru, srikakulam, Andhra Pradesh, India';
+const PHONE_NUMBER = '+91 9398594347';
 
 export default function Contact() {
   const [name, setName] = useState('');
@@ -121,6 +122,12 @@ export default function Contact() {
               </Typography>
               <Typography variant="body2" sx={{ maxWidth: 420, lineHeight: 1.7 }}>
                 {ADDRESS}
+              </Typography>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.12em' }}>
+                Phone Number
+              </Typography>
+              <Typography variant="body2" sx={{ maxWidth: 420, lineHeight: 1.7 }}>
+                {PHONE_NUMBER}
               </Typography>
               <Typography
                 variant="overline"

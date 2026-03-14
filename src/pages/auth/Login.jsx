@@ -13,8 +13,9 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
   const [step, setStep] = useState('input');
-  const [authMode, setAuthMode] = useState('otp'); // 'otp' | 'pin'
+  const [authMode, setAuthMode] = useState('otp'); // 'otp' | 'password' | 'pin'
   const [pin, setPin] = useState('');
   const [pinLockSeconds, setPinLockSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -226,6 +227,36 @@ export default function Login() {
     }
   };
 
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password, // reuse otp state as password is not otherwise used in this component
+          deviceId,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid email or password.');
+      }
+      if (!data.accessToken || !data.refreshToken || !data.user) {
+        throw new Error('Unexpected password login response from server');
+      }
+      persist(data.accessToken, data.refreshToken, data.user);
+      navigate(location.state?.from?.pathname || '/', { replace: true });
+    } catch (err) {
+      setError(err.message || 'Email/password sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, alignItems: 'center' }}>
       <Box sx={{ display: { xs: 'none', md: 'flex' }, minHeight: '100vh', alignItems: 'center', justifyContent: 'center', p: 4, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg, #1a2530 0%, #252d35 100%)' : 'linear-gradient(135deg, #e8f4f8 0%, #f0f4f8 100%)' }}>
@@ -247,7 +278,7 @@ export default function Login() {
 
             <Divider sx={{ my: 2 }}><Typography variant="caption" color="text.secondary">or</Typography></Divider>
 
-            {/* Mode toggle: Google/OTP or PIN */}
+            {/* Mode toggle: Google/OTP or PIN or Password */}
             <Box sx={{ display: 'flex', gap: 0.5, mb: 2, flexWrap: 'wrap' }}>
               <Button
                 size="small"
@@ -259,6 +290,17 @@ export default function Login() {
                 sx={{ textTransform: 'none', flex: 1, minWidth: 0 }}
               >
                 Google / OTP
+              </Button>
+              <Button
+                size="small"
+                variant={authMode === 'password' ? 'contained' : 'text'}
+                onClick={() => {
+                  setAuthMode('password');
+                  setError('');
+                }}
+                sx={{ textTransform: 'none', flex: 1, minWidth: 0 }}
+              >
+                Password
               </Button>
               <Button
                 size="small"
@@ -345,7 +387,7 @@ export default function Login() {
                   </Box>
                 )}
               </>
-            ) : (
+            ) : authMode === 'pin' ? (
               <Box component="form" onSubmit={handlePinLogin}>
                 <TextField
                   type="email"
@@ -388,6 +430,41 @@ export default function Login() {
                   Use OTP / Google instead
                 </Button>
               </Box>
+            ): (
+              <Box component="form" onSubmit={handlePasswordLogin}>
+              <TextField
+                type="email"
+                label="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                fullWidth
+                sx={{ mb: 1.5 }}
+              />
+              <TextField
+                type="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                fullWidth
+                sx={{ mb: 1.5 }}
+              />
+              {error && (
+                <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1.5 }}>
+                  {error}
+                </Alert>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={loading}
+                sx={{ mb: 0.5, padding: 1, fontSize: '1.15rem' }}
+              >
+                Sign in with Password
+              </Button>
+            </Box>
             )}
 
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>

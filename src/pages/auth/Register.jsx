@@ -14,8 +14,6 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../api/client.js';
 
-const GMAIL_SUFFIX = '@gmail.com';
-
 export default function Register() {
   const navigate = useNavigate();
   const { persist } = useAuth();
@@ -85,7 +83,8 @@ export default function Register() {
   }, []);
 
   const normalizedEmail = email.trim().toLowerCase();
-  const isGmail = normalizedEmail.endsWith(GMAIL_SUFFIX) && normalizedEmail.length > GMAIL_SUFFIX.length;
+  const isValidEmail =
+    !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,8 +97,8 @@ export default function Register() {
       setError('Password must be at least 8 characters.');
       return;
     }
-    if (!isGmail) {
-      setError('Please use your Gmail address (@gmail.com).');
+    if (!isValidEmail) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -216,7 +215,7 @@ export default function Register() {
               Create your Account
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Sign up with Google or use your Gmail address and a password.
+              Sign up with Google or use your email address and a password.
             </Typography>
 
             <Box ref={googleBtnRef} sx={{ width: '100%', minHeight: 48, mb: 2, display: 'flex', justifyContent: 'center' }} aria-label="Sign up with Google" />
@@ -235,8 +234,8 @@ export default function Register() {
                 required
                 fullWidth
                 sx={{ mb: 1.5 }}
-                helperText={email && !isGmail ? 'Only @gmail.com addresses are allowed' : ''}
-                error={!!email && !isGmail}
+                helperText={email && !isValidEmail ? 'Please enter a valid email address' : ''}
+                error={!!email && !isValidEmail}
               />
               <TextField
                 type="password"
@@ -269,7 +268,7 @@ export default function Register() {
                 type="submit"
                 variant="contained"
                 fullWidth
-                // disabled={loading || !isGmail || password.length < 8 || password !== confirmPassword}
+                // disabled={loading || !isValidEmail || password.length < 8 || password !== confirmPassword}
                 sx={{ padding: 1, fontSize: '1.15rem' }}
               >
                 {loading ? 'Creating account…' : 'Create account'}

@@ -6,7 +6,7 @@
 export const POLICY_CONTENT = {
   'privacy-policy': `# PRIVACY POLICY
 
-**Effective Date: [Insert Effective Date]**
+**Effective Date: 2nd march 2026**
 
 This Privacy Policy describes how Rover Exim Sources (Proprietorship of Yasasree Gudla) ("we", "us", "our") collects, uses, stores, and protects information when you access or use https://www.fieldagentreport.com (the "Platform").
 
@@ -153,11 +153,11 @@ Rover Exim Sources
 4-99, Ground Floor, Budumuru, Laveru,
 Srikakulam, Andhra Pradesh, India
 
-Email: [Insert Official Email]`,
+Email: support@fieldagentreport.com`,
 
   'refund-policy': `# REFUND & CANCELLATION POLICY
 
-**Effective Date: [Insert Effective Date]**
+**Effective Date:2nd march 2026 **
 
 This Refund & Cancellation Policy applies to all subscriptions and services offered through https://www.fieldagentreport.com (the "Platform"), operated by:
 
@@ -268,11 +268,11 @@ For questions regarding subscriptions or billing:
 Rover Exim Sources
 Srikakulam, Andhra Pradesh, India
 
-Email: [Insert Official Email]`,
+Email: support@fieldagentreport.com`,
 
   'return-policy': `# RETURN POLICY
 
-**Effective Date: [Insert Effective Date]**
+**Effective Date: 2nd march 2026**
 
 This Return Policy applies to digital services/subscriptions offered through https://www.fieldagentreport.com (the "Platform").
 
@@ -299,11 +299,11 @@ Please refer to our Refund Policy for details:
 Rover Exim Sources
 4-99, budumuru, laveru, srikakulam, Andhra Pradesh, India
 
-Email: SUPPORT@DOMAIN.MAIL`,
+Email: support@fieldagentreport.com`,
 
   'terms-and-conditions': `# TERMS & CONDITIONS
 
-**Effective Date: [Insert Date]**
+**Effective Date: 2nd march 2026**
 
 ---
 
@@ -584,11 +584,11 @@ Rover Exim Sources
 4-99, Ground Floor, Budumuru, Laveru,
 Srikakulam, Andhra Pradesh, India
 
-Email: [Insert Official Email Address]`,
+Email: support@fieldagentreport.com`,
 
   'cookie-policy': `# COOKIE POLICY
 
-**Effective Date: [Insert Effective Date]**
+**Effective Date: 2nd march 2026**
 
 This Cookie Policy explains how Rover Exim Sources (Proprietorship of Yasasree Gudla) ("we", "us", "our") uses cookies and similar technologies on https://www.fieldagentreport.com (the "Platform").
 
@@ -695,11 +695,11 @@ Rover Exim Sources
 4-99, Ground Floor, Budumuru, Laveru,
 Srikakulam, Andhra Pradesh, India
 
-Email: [Insert Official Email]`,
+Email: support@fieldagentreport.com`,
 
   'legal_disclaimer': `# LEGAL DISCLAIMER
 
-**Effective Date: [Insert Effective Date]**
+**Effective Date: 2nd march 2026**
 
 This Legal Disclaimer applies to the use of https://www.fieldagentreport.com (the "Platform"), operated by:
 
@@ -817,5 +817,5 @@ We reserve the right to update this Disclaimer at any time. Continued use of the
 Rover Exim Sources
 Srikakulam, Andhra Pradesh, India
 
-Email: [Insert Official Email]`,
+Email: support@fieldagentreport.com`,
 };

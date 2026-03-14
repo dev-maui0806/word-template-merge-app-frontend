@@ -10,6 +10,7 @@ function loadPersisted() {
         imeSubType: parsed.imeSubType ?? '',
         country: parsed.country ?? 'India',
         countryTimezoneId: parsed.countryTimezoneId ?? null,
+        currentTimeZone: parsed.currentTimeZone ?? null,
         arrangeVenueData: {},
         trialStatus: null,
       };
@@ -22,6 +23,7 @@ function loadPersisted() {
     imeSubType: '',
     country: 'India',
     countryTimezoneId: null,
+    currentTimeZone: null,
     arrangeVenueData: {},
     trialStatus: null,
   };
@@ -38,9 +40,11 @@ function appReducer(state, action) {
     case 'SET_IME_SUB_TYPE':
       return { ...state, imeSubType: action.payload };
     case 'SET_COUNTRY':
-      return { ...state, country: action.payload, countryTimezoneId: null };
+      return { ...state, country: action.payload, countryTimezoneId: null, currentTimeZone: null };
     case 'SET_COUNTRY_TIMEZONE':
       return { ...state, countryTimezoneId: action.payload };
+    case 'SET_CURRENT_TIMEZONE':
+      return { ...state, currentTimeZone: action.payload };
     case 'UPDATE_ARRANGE_VENUE_FIELD':
       return {
         ...state,
@@ -70,6 +74,7 @@ export function AppProvider({ children }) {
           imeSubType: state.imeSubType,
           country: state.country,
           countryTimezoneId: state.countryTimezoneId,
+          currentTimeZone: state.currentTimeZone,
         })
       );
     } catch {
@@ -91,6 +96,10 @@ export function AppProvider({ children }) {
 
   const setCountryTimezone = useCallback((timezoneId) => {
     dispatch({ type: 'SET_COUNTRY_TIMEZONE', payload: timezoneId });
+  }, []);
+
+  const setCurrentTimeZone = useCallback((value) => {
+    dispatch({ type: 'SET_CURRENT_TIMEZONE', payload: value });
   }, []);
 
   const updateArrangeVenueField = useCallback((field, value) => {
@@ -118,6 +127,7 @@ export function AppProvider({ children }) {
     setImeSubType,
     setCountry,
     setCountryTimezone,
+    setCurrentTimeZone,
     updateArrangeVenueField,
     setArrangeVenueData,
     setTrialStatus,
