@@ -102,7 +102,7 @@ export default function Settings() {
               flexShrink: 0,
               height: { xs: 'auto', md: '100%' },
               borderRadius: 1,
-              boxShadow: 4,
+              boxShadow: 0,
               bgcolor: 'background.paper',
               display: 'flex',
               flexDirection: 'column',
@@ -245,7 +245,7 @@ function SubscriptionSection() {
         sx={{
           minHeight: { xs: 'auto', md: '100%' },
           borderRadius: 1,
-          boxShadow: 4,
+          boxShadow: 0,
           bgcolor: 'background.paper',
           display: 'flex',
           flexDirection: 'column',
@@ -305,11 +305,9 @@ function SubscriptionSection() {
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-            height:'calc(100vh - 510px)',
-            alignItems:'space-between',
-            justifyContent:'space-between',
-            gap: 2,
            
+            gap: 2.5,
+            mt:1
           }}
         >
           {plansWithPrices.map((plan) => (
@@ -465,7 +463,7 @@ function ProfileAndPinSection() {
       sx={{
         minHeight: { xs: 'auto', md: '100%' },
         borderRadius: 1,
-        boxShadow: 4,
+        boxShadow: 0,
         bgcolor: 'background.paper',
         display: 'flex',
         flexDirection: 'column',
