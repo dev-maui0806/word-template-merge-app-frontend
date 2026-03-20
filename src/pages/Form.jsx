@@ -3,33 +3,13 @@
  * Fetches field metadata from backend, renders inputs, submits to generate endpoint.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  TextField,
-  Typography,
-  Alert,
-  IconButton,
-} from '@mui/material';
-import Autocomplete from '@mui/material/Autocomplete';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import DownloadIcon from '@mui/icons-material/Download';
-import CloseIcon from '@mui/icons-material/Close';
 import Header from '../components/Header.jsx';
 import FormField from '../components/form/FormField.jsx';
 import { useApp } from '../context/AppContext.jsx';
-import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
+import { computeTemplateFormDerived, isHiddenFromFormUiClient } from '../utils/templateFormDerived.js';
 
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024; // hard safety cap before compression
 
@@ -74,29 +54,207 @@ async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, qualit
   });
 }
 
-function FormSection({ title, children }) {
+function AlertBox({ variant = 'info', children, onClose }) {
+  const styles =
+    variant === 'error'
+      ? 'border-red-200 bg-red-50 text-red-800'
+      : variant === 'success'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        : 'border-slate-200 bg-white text-slate-700';
   return (
-    <Box sx={{ mb: 3 }}>
-      <Typography
-        variant="overline"
-        color="error"
-        fontWeight={700}
-        sx={{
-          display: 'block',
-          mb: 2,
-          fontSize: '0.7rem',
-          letterSpacing: '0.16em',
-        }}
-      >
-        {title}
-      </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>{children}</Box>
-    </Box>
+    <div className={`flex items-start justify-between gap-3 rounded-2xl border px-4 py-3 text-[14px] shadow-sm ${styles}`}>
+      <div className="min-w-0">{children}</div>
+      {onClose ? (
+        <button type="button" onClick={onClose} className="shrink-0 rounded-lg px-2 py-1 text-[14px] hover:bg-black/5">
+          ×
+        </button>
+      ) : null}
+    </div>
   );
 }
 
-function FormRow({ fullWidth, children }) {
-  return <Box sx={fullWidth ? { gridColumn: '1 / -1' } : undefined}>{children}</Box>;
+function CardSectionIcon({ title }) {
+  const cls = 'h-[18px] w-[18px]';
+  switch (title) {
+    case 'Dates':
+      return (
+        <svg viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+          <path d="M8 3.5v3M16 3.5v3M3.5 9.5h17" />
+        </svg>
+      );
+    case 'Claimant Details':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+        </svg>
+      );
+    case 'Venue Information':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+      );
+    case 'Times':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 8v5l3 2" />
+          <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+        </svg>
+      );
+    case 'Event Details':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+        </svg>
+      );
+    case 'Attachments':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+        </svg>
+      );
+    case 'Accommodation':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 10.5V20a1 1 0 0 0 1 1h4v-8h8v8h4a1 1 0 0 0 1-1v-9.5" />
+          <path d="M12 3L2 10h20L12 3z" />
+        </svg>
+      );
+    case 'Notary':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
+          <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+        </svg>
+      );
+    case 'ENT Test':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4.5 12h3l2.5-6 2.5 12 2.5-6h3" />
+        </svg>
+      );
+    case 'Distance & Options':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12h4l2-7 4 14 2-7h6" />
+        </svg>
+      );
+    case 'General':
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6h16M4 12h16M4 18h10" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 6v6l4 2" />
+          <path d="M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+        </svg>
+      );
+  }
+}
+
+function CardShell({ title, children, actions, className, contentClassName }) {
+  return (
+    <div
+      className={[
+        'rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]',
+        className || '',
+      ].join(' ')}
+    >
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-50 text-rose-500 ring-1 ring-rose-100">
+            <CardSectionIcon title={title} />
+          </div>
+          <div className="text-[15px] font-semibold text-slate-900">{title}</div>
+        </div>
+        {actions}
+      </div>
+      <div className={contentClassName}>{children}</div>
+    </div>
+  );
+}
+
+function PillToggle({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'h-8 rounded-full px-4 text-[13px] font-medium transition',
+        active ? 'bg-rose-500 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TypeToggle({ value, options, onChange }) {
+  const iconFor = (opt) => {
+    const v = String(opt || '').toLowerCase().replace(/\s+/g, '');
+    if (v.includes('virtual')) {
+      return (
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+          <path d="M16 9l5-3v12l-5-3V9z" />
+        </svg>
+      );
+    }
+    if (v.includes('in-person') || v.includes('inperson') || v.includes('person')) {
+      return (
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    }
+    if (v === 'none' || v.includes('none')) {
+      return (
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 12h12" />
+        </svg>
+      );
+    }
+    return (
+      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 6v6l4 2" />
+        <path d="M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+      </svg>
+    );
+  };
+
+  return (
+    <div className="flex items-center rounded-[16px] border border-slate-200 bg-white p-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+      {options.map((opt) => {
+        const active = (value ?? '') === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={[
+              'inline-flex h-10 items-center gap-2 rounded-[14px] px-4 text-[14px] font-semibold transition',
+              active
+                ? 'border border-rose-200 bg-rose-50 text-rose-600 shadow-[0_6px_16px_rgba(244,63,94,0.10)]'
+                : 'border border-transparent text-slate-600 hover:bg-slate-50',
+            ].join(' ')}
+          >
+            {iconFor(opt)}
+            <span>{opt}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /** Human-readable title from action slug */
@@ -105,6 +263,19 @@ function slugToTitle(slug) {
     .split('-')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+}
+
+/** Multi-column flow so cards pack vertically without large empty gaps (CSS columns). */
+function TemplateMasonry({ children }) {
+  return <div className="columns-1 md:columns-2 [column-gap:1.5rem]">{children}</div>;
+}
+
+function MasonrySection({ fullWidth, children }) {
+  return (
+    <div className={['pb-6 break-inside-avoid', fullWidth ? '[column-span:all]' : ''].filter(Boolean).join(' ')}>
+      {children}
+    </div>
+  );
 }
 
 export default function Form() {
@@ -127,6 +298,33 @@ export default function Form() {
   const [previewEditedHtml, setPreviewEditedHtml] = useState('');
   const previewContentRef = useRef(null);
   const [claimantOptions, setClaimantOptions] = useState([]);
+
+  const imageFieldNames = useMemo(() => {
+    const list = (metadata?.fields || [])
+      .filter((f) => f && f.type === 'image' && typeof f.name === 'string')
+      .map((f) => f.name);
+    // Stable order (matches metadata inference ordering)
+    return list;
+  }, [metadata]);
+
+  const computedFieldNames = useMemo(
+    () => new Set((metadata?.fields || []).filter((f) => f.computed).map((f) => f.name)),
+    [metadata]
+  );
+
+  /** Client preview for computed vars — align with backend `runAutomation` for ALL actions. */
+  const templateDerived = useMemo(() => computeTemplateFormDerived(data), [data]);
+
+  const getFieldValue = useCallback(
+    (f) => {
+      if (!f) return undefined;
+      if (f.type === 'image') return images[f.name];
+      if (f.name === 'Event_Type') return getEventTypeForBackend() || data[f.name] || '';
+      if (f.computed) return templateDerived[f.name] ?? '';
+      return data[f.name];
+    },
+    [data, images, templateDerived, getEventTypeForBackend]
+  );
 
   useEffect(() => {
     if (!actionSlug) return;
@@ -187,18 +385,39 @@ export default function Form() {
   }, []);
 
   const handleImageUpload = useCallback(
-    async (key, file) => {
+    async (key, fileOrFiles) => {
       try {
-        if (file.size > MAX_IMAGE_SIZE) {
-          setError('Image file is too large to process. Please choose a smaller file.');
-          return;
-        }
+        const files = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+        const safeFiles = files.filter(Boolean);
+        if (safeFiles.length === 0) return;
+
         setError('');
-        const compressedDataUrl = await compressImageFile(file);
-        if (typeof compressedDataUrl === 'string' && compressedDataUrl.startsWith('data:image/')) {
-          setImages((prev) => ({ ...prev, [key]: compressedDataUrl }));
-        } else {
-          setError('Please select a valid image file');
+
+        for (const file of safeFiles) {
+          if (!file) continue;
+
+          if (file.size > MAX_IMAGE_SIZE) {
+            setError(`"${file.name}" is too large to process. Please choose a smaller file.`);
+            continue;
+          }
+
+          const compressedDataUrl = await compressImageFile(file);
+          if (typeof compressedDataUrl === 'string' && compressedDataUrl.startsWith('data:image/')) {
+            setImages((prev) => {
+              const existing = prev[key];
+              const arr = Array.isArray(existing)
+                ? existing
+                : existing
+                  ? [existing]
+                  : [];
+              return {
+                ...prev,
+                [key]: [...arr, compressedDataUrl],
+              };
+            });
+          } else {
+            setError('Please select a valid image file');
+          }
         }
       } catch (err) {
         setError(err.message || 'Failed to process image. Please try a different file.');
@@ -207,18 +426,38 @@ export default function Form() {
     []
   );
 
-  const handleImageRemove = useCallback((key) => {
+  const handleImageRemove = useCallback((key, index) => {
     setImages((prev) => {
+      const current = prev[key];
+      if (!Array.isArray(current)) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      const arr = current.slice();
+      if (typeof index === 'number') {
+        arr.splice(index, 1);
+      }
       const next = { ...prev };
-      delete next[key];
+      if (arr.length === 0) {
+        delete next[key];
+      } else if (arr.length === 1) {
+        next[key] = arr[0];
+      } else {
+        next[key] = arr;
+      }
       return next;
     });
+    // Keep one layout per field; if no images remain, clear layout.
     setImageLayout((prev) => {
+      if (!(key in images)) return prev;
+      const stillHas = images[key] && (Array.isArray(images[key]) ? images[key].length > 1 : true);
+      if (stillHas) return prev;
       const next = { ...prev };
       delete next[key];
       return next;
     });
-  }, []);
+  }, [images]);
 
   const handleImageLayoutChange = useCallback((key, layout) => {
     setImageLayout((prev) => ({ ...prev, [key]: layout }));
@@ -226,6 +465,9 @@ export default function Form() {
 
   const buildPayload = useCallback(() => {
     const payload = { ...data };
+    for (const key of computedFieldNames) {
+      delete payload[key];
+    }
     // Always include Country and Event_Type for all action types
     // These come from AppContext, not form inputs - ensure they override any form data
     payload.Country = country;
@@ -244,7 +486,7 @@ export default function Form() {
       if (Object.keys(out).length) payload.imageLayout = out;
     }
     return payload;
-  }, [data, images, imageLayout, country, countryTimezoneId, getEventTypeForBackend]);
+  }, [data, images, imageLayout, country, countryTimezoneId, getEventTypeForBackend, computedFieldNames]);
 
   const handleGenerate = async () => {
     setError('');
@@ -389,30 +631,34 @@ export default function Form() {
 
   if (loading) {
     return (
-      <Box sx={(theme) => ({ minHeight: '100vh', pb: 4, bgcolor: theme.palette.background.default })}>
+      <div className="min-h-screen bg-[#f6f7fb] pb-10">
         <Header />
-        <Container maxWidth="md" sx={{ py: 4 }}>
-          <Typography color="text.secondary">Loading form…</Typography>
-        </Container>
-      </Box>
+        <div className="mx-auto max-w-[1024px] px-4 py-8">
+          <div className="text-[14px] text-slate-600">Loading form…</div>
+        </div>
+      </div>
     );
   }
 
   if (metaError || !metadata?.ok) {
     return (
-      <Box sx={(theme) => ({ minHeight: '100vh', pb: 4, bgcolor: theme.palette.background.default })}>
+      <div className="min-h-screen bg-[#f6f7fb] pb-10">
         <Header />
-        <Container maxWidth="md" sx={{ py: 4 }}>
-          <Alert severity="error">{metaError || metadata?.error || 'Template not found'}</Alert>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mt: 2 }}>
-            Back
-          </Button>
-        </Container>
-      </Box>
+        <div className="mx-auto max-w-[1024px] px-4 py-8">
+          <AlertBox variant="error">{metaError || metadata?.error || 'Template not found'}</AlertBox>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[14px] font-semibold text-slate-700 hover:bg-black/5"
+          >
+            <span aria-hidden>←</span> Back
+          </button>
+        </div>
+      </div>
     );
   }
 
-  const fields = metadata.fields || [];
+  const fields = (metadata.fields || []).filter((f) => f?.name && !isHiddenFromFormUiClient(f.name));
   // TYPE fields (Meeting_Type, Room_Type, etc.) go in header at top-right; exclude from sections
   const typeFields = fields.filter(
     (f) => f.type === 'select' && f.name !== 'Event_Type' && /_Type$/.test(f.name)
@@ -428,384 +674,284 @@ export default function Form() {
   }, {});
 
   // Sort sections to ensure consistent order: Attachments always appears last
-  const sectionOrder = ['Dates', 'Claimant Details', 'Times', 'Venue Information', 'Accommodation', 'Notary', 'ENT Test', 'Distance & Options', 'General', 'Attachments'];
+  const sectionOrder = ['Dates', 'Claimant Details', 'Venue Information', 'Times', 'Event Details', 'Accommodation', 'Notary', 'ENT Test', 'Distance & Options', 'General', 'Attachments'];
   const sortedSections = Object.entries(bySection).sort(([a], [b]) => {
     const aIdx = sectionOrder.indexOf(a);
     const bIdx = sectionOrder.indexOf(b);
     return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
   });
 
+  const isArrangeVenue = actionSlug === 'arrange-venue';
+
+  const sectionMap = (() => {
+    const out = {};
+    for (const [name, fs] of sortedSections) out[name] = fs;
+    return out;
+  })();
+
+  /** Unified template UI: match arrange-venue card chrome on every action type */
+  const clientCard = true;
+
+  const renderField = (f) => {
+    // Claimant_Name: datalist autosuggest (same styling on all template forms)
+    if (f.name === 'Claimant_Name') {
+      const listId = `claimant-options-${actionSlug}`;
+      return (
+        <div key={f.name} className={f.fullWidth ? 'col-span-full' : undefined}>
+          <div className="w-full">
+            <div className="mb-1.5 text-[15px] font-bold text-slate-900">{f.label}</div>
+            <input
+              list={listId}
+              className="h-11 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[15px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              placeholder={f.placeholder}
+              value={data[f.name] ?? ''}
+              onChange={(e) => handleChange(f.name, e.target.value)}
+            />
+            <datalist id={listId}>
+              {claimantOptions.map((opt) => (
+                <option key={opt} value={opt} />
+              ))}
+            </datalist>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={f.name} className={f.fullWidth ? 'col-span-full' : undefined}>
+        <FormField
+          field={f}
+          sectionTitle={f.section}
+          value={getFieldValue(f)}
+          onChange={handleChange}
+          onImageUpload={handleImageUpload}
+          onImageRemove={handleImageRemove}
+          imageLayout={f.type === 'image' ? imageLayout[f.name] : undefined}
+          onImageLayoutChange={handleImageLayoutChange}
+          clientCard
+        />
+      </div>
+    );
+  };
+
+  const renderSectionCard = (title) => {
+    const sectionFields = sectionMap[title] || [];
+    if (sectionFields.length === 0) return null;
+    const cardPad = 'p-6 md:p-8';
+    return (
+      <CardShell
+        title={title}
+        className={cardPad}
+        contentClassName="pt-1"
+        actions={null}
+      >
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+          {sectionFields.map(renderField)}
+        </div>
+      </CardShell>
+    );
+  };
+
   return (
-    <Box
-      sx={(theme) => ({
-        minHeight: '100vh',
-        pb: 4,
-        bgcolor: theme.palette.background.default,
-      })}
-    >
+    <div className="min-h-screen bg-[#f6f7fb] pb-12">
       <Header />
-      <Container maxWidth="md" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(-1)}
-            sx={{ textTransform: 'none', fontWeight: 500 }}
-          >
-            Back
-          </Button>
-          <Box sx={{ flex: 1 }}>
-            <Typography
-              sx={{
-                fontSize: { xs: '1.5rem', sm: '1.75rem' },
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                color: 'text.primary',
-              }}
+      <div className="mx-auto max-w-[1024px] px-4 pt-8">
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="group mb-3 inline-flex items-center gap-3 rounded-xl py-2 text-slate-600 transition hover:text-slate-800"
             >
-              {slugToTitle(actionSlug)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {country} – {getEventTypeForBackend() || 'Select event type'}
-            </Typography>
-          </Box>
-        </Box>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.10)] transition group-hover:-translate-y-[1px] group-hover:bg-slate-50 group-hover:shadow-[0_10px_22px_rgba(15,23,42,0.14)]">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 text-slate-500 transition group-hover:text-slate-700"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </span>
+              <span className="text-[16px] font-medium text-slate-600 transition group-hover:text-slate-800">Back to Home</span>
+            </button>
+            <div className="text-[34px] font-sans font-[700] tracking-[-0.02em] text-slate-800">{slugToTitle(actionSlug)}</div>
+            <div className="mt-1 text-[18px] font-semibold font-sans text-slate-500">{getEventTypeForBackend() || 'Deposition'}</div>
+          </div>
 
-        <Card
-          sx={(theme) => {
-            const isDark = theme.palette.mode === 'dark';
-            return {
-              mb: 3,
-              borderRadius: '24px',
-              backgroundColor: isDark ? theme.palette.background.paper : '#ffffff',
-              boxShadow: isDark
-                ? '0 18px 45px rgba(0,0,0,0.9)'
-                : '0 18px 45px rgba(15,23,42,0.12)',
-              transition: 'background-color 0.25s ease, box-shadow 0.25s ease',
-              '&:hover': {
-                boxShadow: isDark
-                  ? '0 26px 60px rgba(0,0,0,1)'
-                  : '0 26px 60px rgba(15,23,42,0.18)',
-              },
-            };
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            {/* Header row: TYPE toggles at top-right (Meeting Type, Room Type, etc.) */}
-            {typeFields.length > 0 && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'flex-start',
-                  flexWrap: 'wrap',
-                  gap: 2,
-                  mb: 3,
-                  pb: 2,
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                }}
-              >
-                {typeFields.map((f) => (
-                  <Box key={f.name} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.75 }}>
-                    <Typography
-                      variant="overline"
-                      sx={{
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.16em',
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {f.label.toUpperCase()}
-                    </Typography>
-                    <Box
-                      sx={(theme) => ({
-                        display: 'flex',
-                        gap: 0.5,
-                        flexWrap: 'wrap',
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : '#f2f3f5',
-                        borderRadius: '50px',
-                        p: 0.5,
-                        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : '#e2e4e8'}`,
-                      })}
-                    >
-                      {(f.options || []).map((opt) => {
-                        const active = (data[f.name] ?? f.default ?? '') === opt;
-                        return (
-                          <Box
-                            key={opt}
-                            component="button"
-                            type="button"
-                            onClick={() => handleChange(f.name, opt)}
-                            sx={(theme) => ({
-                              px: 2,
-                              py: 1,
-                              borderRadius: '50px',
-                              border: 'none',
-                              fontSize: '0.875rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              fontFamily: 'inherit',
-                              backgroundColor: active
-                                ? theme.palette.error.main
-                                : 'transparent',
-                              color: active ? '#fff' : theme.palette.text.primary,
-                              transition: 'background-color 0.2s ease, color 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: active
-                                  ? theme.palette.error.dark
-                                  : theme.palette.mode === 'dark'
-                                    ? 'rgba(255,255,255,0.08)'
-                                    : 'rgba(255,255,255,0.9)',
-                              },
-                            })}
-                          >
-                            {opt}
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            )}
+          {typeFields.length > 0 ? (
+            <div className="flex flex-col items-end gap-3">
+              {typeFields.map((f) => (
+                <div key={f.name} className="text-right">
+                  <TypeToggle
+                    value={data[f.name] ?? f.default ?? ''}
+                    options={f.options || []}
+                    onChange={(opt) => handleChange(f.name, opt)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
-            {fields.length === 0 ? (
-              <Alert severity="info">
-                No template variables were detected in this template. If your document uses placeholders like {'{{Variable_Name}}'}, ensure the template file exists and is valid. You can still use Preview or Generate Document.
-              </Alert>
-            ) : (
-            sortedSections.map(([section, sectionFields], idx) => (
-              <Box key={section}>
-                {idx > 0 && <Divider sx={{ my: 3 }} />}
-                <FormSection title={section}>
-                  {sectionFields
-                    .filter((f) => !f.computed)
-                    .map((f) => {
-                      // Special handling for Event_Type in arrange-venue (read-only from context)
-                      if (f.name === 'Event_Type') {
-                        return (
-                          <FormRow key={f.name} fullWidth={f.fullWidth}>
-                            <TextField
-                              fullWidth
-                              size="medium"
-                              label={f.label}
-                              value={getEventTypeForBackend() || '—'}
-                              InputProps={{ readOnly: true }}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                          </FormRow>
-                        );
-                      }
-                      // Special handling for Claimant_Name: autosuggest from previous documents
-                      if (f.name === 'Claimant_Name') {
-                        return (
-                          <FormRow key={f.name} fullWidth={f.fullWidth}>
-                            <Autocomplete
-                              freeSolo
-                              options={claimantOptions}
-                              value={data[f.name] ?? ''}
-                              onInputChange={(_, newValue) => handleChange(f.name, newValue)}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  fullWidth
-                                  size="medium"
-                                  label={f.label}
-                                  placeholder={f.placeholder}
-                                  InputLabelProps={{ shrink: true }}
-                                />
-                              )}
-                            />
-                          </FormRow>
-                        );
-                      }
-                      return (
-                        <FormRow key={f.name} fullWidth={f.fullWidth}>
-                          <FormField
-                            field={f}
-                            value={f.type === 'image' ? images[f.name] : data[f.name]}
-                            onChange={handleChange}
-                            onImageUpload={handleImageUpload}
-                            onImageRemove={handleImageRemove}
-                            imageLayout={f.type === 'image' ? imageLayout[f.name] : undefined}
-                            onImageLayoutChange={handleImageLayoutChange}
-                          />
-                        </FormRow>
-                      );
+        <div className="mt-8">
+          {fields.length === 0 ? (
+            <AlertBox variant="info">
+              No template variables were detected in this template. If your document uses placeholders like {'{{Variable_Name}}'}, ensure the template file exists and is valid. You can still use Preview or Generate Document.
+            </AlertBox>
+          ) : (
+            <TemplateMasonry>
+              {isArrangeVenue ? (
+                <>
+                  {['Dates', 'Claimant Details', 'Venue Information', 'Times'].map((title) => {
+                    const el = renderSectionCard(title);
+                    return el ? <MasonrySection key={title}>{el}</MasonrySection> : null;
+                  })}
+                  {(() => {
+                    const el = renderSectionCard('Event Details');
+                    return el ? <MasonrySection key="Event Details">{el}</MasonrySection> : null;
+                  })()}
+                  {(() => {
+                    const el = renderSectionCard('Attachments');
+                    return el ? (
+                      <MasonrySection key="Attachments" fullWidth>
+                        {el}
+                      </MasonrySection>
+                    ) : null;
+                  })()}
+                  {sortedSections
+                    .map(([section]) => section)
+                    .filter((s) => !['Dates', 'Claimant Details', 'Venue Information', 'Times', 'Event Details', 'Attachments'].includes(s))
+                    .map((s) => {
+                      const el = renderSectionCard(s);
+                      return el ? (
+                        <MasonrySection key={s} fullWidth>
+                          {el}
+                        </MasonrySection>
+                      ) : null;
                     })}
-                </FormSection>
-              </Box>
-            ))
-            )}
-          </CardContent>
-        </Card>
+                </>
+              ) : (
+                <>
+                  {sortedSections.map(([section]) => {
+                    const el = renderSectionCard(section);
+                    if (!el) return null;
+                    return (
+                      <MasonrySection key={section} fullWidth={section === 'Attachments'}>
+                        {el}
+                      </MasonrySection>
+                    );
+                  })}
+                </>
+              )}
+            </TemplateMasonry>
+          )}
+        </div>
 
-        {error && (
-          <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
+        {error ? (
+          <div className="mt-6">
+            <AlertBox variant="error" onClose={() => setError('')}>
+              {error}
+            </AlertBox>
+          </div>
+        ) : null}
+        {success ? (
+          <div className="mt-4">
+            <AlertBox variant="success" onClose={() => setSuccess('')}>
+              {success}
+            </AlertBox>
+          </div>
+        ) : null}
 
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 1.5,
-            mb: 2,
-            mt: 1,
-          }}
-        >
-          <Button
-            variant="outlined"
-            color="error"
+        <div className="mt-6 flex flex-wrap gap-3 pb-10">
+          <button
+            type="button"
             onClick={handlePreview}
             disabled={submitLoading}
-            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
+            className="inline-flex items-center justify-center rounded-2xl border border-rose-500 bg-white px-5 py-3 text-[14px] font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
           >
             Preview
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<DownloadIcon />}
+          </button>
+          <button
+            type="button"
             onClick={handleGenerate}
             disabled={submitLoading}
-            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500 px-5 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-rose-600 disabled:opacity-60"
           >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 3v12" />
+              <path d="M7 10l5 5 5-5" />
+              <path d="M4 21h16" />
+            </svg>
             Generate Document
-          </Button>
-        </Box>
+          </button>
+        </div>
+      </div>
 
-        <Dialog
-          open={previewOpen}
-          onClose={() => {
-            setPreviewOpen(false);
-            setPreviewEditing(false);
-          }}
-          maxWidth="md"
-          fullWidth
-          slotProps={{
-            transition: {
-              onEntered: () => {
-                if (previewContentRef.current && previewHtml) {
-                  previewContentRef.current.innerHTML = previewHtml;
-                }
-              },
-            },
-          }}
-          PaperProps={{ sx: { minHeight: '70vh' } }}
-        >
-          <DialogTitle
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              justifyContent: 'space-between',
-              pr: { xs: 4, sm: 6 },
-              pb: 1.5,
-              gap: 1,
-              position: 'relative',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Template Preview
-              {previewEditing && (
-                <Chip label="Editing" color="primary" size="small" sx={{ fontWeight: 600 }} />
-              )}
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
+      {/* Preview modal */}
+      {previewOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setPreviewOpen(false); setPreviewEditing(false); }} />
+          <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl">
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-[16px] font-semibold text-slate-900">
+                Template Preview
+                {previewEditing ? (
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[12px] font-semibold text-slate-700">Editing</span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
                   onClick={handleDownloadTemplate}
                   disabled={!previewBlob}
+                  className="rounded-2xl border border-rose-500 bg-white px-4 py-2 text-[13px] font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
                 >
                   Download DOCX
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  size="small"
+                </button>
+                <button
+                  type="button"
                   onClick={handleSaveAndDownload}
+                  className="rounded-2xl bg-rose-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-rose-600"
                 >
                   Save and Download
-                </Button>
-              </Box>
-            </Box>
-            <IconButton
-              aria-label="Close preview"
-              size="small"
-              onClick={() => {
-                setPreviewOpen(false);
-                setPreviewEditing(false);
-              }}
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent dividers sx={{ bgcolor: 'grey.100' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                py: 2,
-              }}
-            >
-              <Box
-                ref={previewContentRef}
-                contentEditable
-                suppressContentEditableWarning
-                onFocus={() => setPreviewEditing(true)}
-                onBlur={() => setPreviewEditing(false)}
-                sx={(theme) => ({
-                  bgcolor: 'background.paper',
-                  border: '2px solid',
-                  borderColor: previewEditing ? 'primary.main' : 'divider',
-                  borderRadius: 1,
-                  minHeight: 400,
-                  width: '100%',
-                  maxWidth: 595,
-                  p: 3,
-                  outline: 'none',
-                   fontFamily: '"Aptos", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                   fontSize: '13pt',
-                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
-                  boxShadow: previewEditing
-                    ? `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.25)' : 'rgba(25, 118, 210, 0.15)'}, 0 4px 20px rgba(0,0,0,0.08)`
-                    : '0 2px 8px rgba(0,0,0,0.06)',
-                  '&:hover': {
-                    boxShadow: previewEditing
-                      ? undefined
-                      : `0 0 0 2px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}, 0 4px 12px rgba(0,0,0,0.08)`,
-                  },
-                  '&:focus': {
-                    boxShadow: `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.2)'}`,
-                  },
-                  '& p': { m: 0, mb: 1 },
-                  '& p:last-child': { mb: 0 },
-                })}
-              />
-            </Box>
-          </DialogContent>
-        </Dialog>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Close preview"
+                  onClick={() => { setPreviewOpen(false); setPreviewEditing(false); }}
+                  className="ml-1 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
 
-        <Typography variant="caption" color="text.secondary">
-          This app was developed by another user. It may be inaccurate or unsafe.
-        </Typography>
-      </Container>
-    </Box>
+            <div className="max-h-[70vh] overflow-auto bg-slate-100 p-4">
+              <div className="mx-auto w-full max-w-[595px]">
+                <div
+                  ref={previewContentRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onFocus={() => setPreviewEditing(true)}
+                  onBlur={() => setPreviewEditing(false)}
+                  className={[
+                    'min-h-[400px] w-full rounded-xl border-2 bg-white p-6 outline-none transition shadow-sm',
+                    previewEditing ? 'border-slate-400 ring-4 ring-slate-200' : 'border-slate-200',
+                  ].join(' ')}
+                  style={{
+                    fontFamily: '"Aptos", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    fontSize: '13pt',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

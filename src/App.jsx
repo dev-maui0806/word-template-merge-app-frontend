@@ -13,6 +13,7 @@ import Policy from './pages/Policy.jsx';
 import Contact from './pages/Contact.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
+import AboutUs from './pages/AboutUs.jsx';  
 import './index.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path="/terms-and-conditions" element={<Policy />} />
               <Route path="/privacy-policy" element={<Policy />} />
               <Route path="/refund-policy" element={<Policy />} />
+              <Route path="/about-us" element={<AboutUs />} />
               <Route path="/return-policy" element={<Policy />} />
               <Route path="/T&C" element={<Policy />} />
               <Route path="/T%26C" element={<Policy />} />

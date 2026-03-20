@@ -25,6 +25,7 @@ const PRODUCT_LINKS = [
   { label: 'Pricing', to: '/settings?section=subscription' },
   { label: 'Tools', to: '/' },
   { label: 'FAQ', to: '/contact' },
+  { label: 'About Us', to: '/about-us' },
 ];
 
 export default function SiteFooter() {

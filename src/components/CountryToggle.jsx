@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Box,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   IconButton,
   List,
   ListItemButton,
   ListItemText,
+  Popover,
   TextField,
   Typography,
   CircularProgress,
 } from '@mui/material';
 import PublicIcon from '@mui/icons-material/Public';
-import CloseIcon from '@mui/icons-material/Close';
 import { useApp } from '../context/AppContext.jsx';
 import { api } from '../api/client.js';
 
@@ -23,7 +20,8 @@ import { api } from '../api/client.js';
  * Supports fuzzy search similar to Admin countries tab.
  */
 export default function CountryToggle({ compact = false }) {
-  const { country, countryTimezoneId, setCountry, setCountryTimezone } = useApp();
+  const { country, countryLabel, countryTimezoneId, setCountry, setCountryLabel, setCountryTimezone } = useApp();
+  const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +34,7 @@ export default function CountryToggle({ compact = false }) {
   const [remoteCountries, setRemoteCountries] = useState(null);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [remoteError, setRemoteError] = useState('');
+  const [view, setView] = useState('countries'); // 'countries' | 'timezones'
 
   useEffect(() => {
     if (!open || countries.length > 0) return;
@@ -70,10 +69,21 @@ export default function CountryToggle({ compact = false }) {
     };
   }, [open, countries.length]);
 
+  // When we have a country name but no label (e.g. from localStorage), backfill label from loaded countries.
+  useEffect(() => {
+    if (!country || countryLabel || countries.length === 0) return;
+    const match = countries.find((c) => (c.name || '').toLowerCase() === country.toLowerCase());
+    if (match) {
+      const label = match.label || `${match.code || ''} ${match.name || ''}`.trim() || match.name;
+      if (label) setCountryLabel(label);
+    }
+  }, [country, countryLabel, countries, setCountryLabel]);
+
   // Remote search across countries AND cities when user types.
   useEffect(() => {
     const q = search.trim();
-    if (!open || q.length === 0) {
+    // Only run remote search while looking at the country list.
+    if (!open || view !== 'countries' || q.length === 0) {
       setRemoteCountries(null);
       setRemoteError('');
       setRemoteLoading(false);
@@ -110,7 +120,7 @@ export default function CountryToggle({ compact = false }) {
     return () => {
       cancelled = true;
     };
-  }, [open, search]);
+  }, [open, view, search]);
 
   const filteredCountries = useMemo(() => {
     const base = remoteCountries && search.trim() ? remoteCountries : countries;
@@ -118,8 +128,21 @@ export default function CountryToggle({ compact = false }) {
   }, [countries, remoteCountries, search]);
 
   const handleSelectCountry = (c) => {
-    setCountry(c.name);
-    setCountryTimezone(null);
+    const isSameCountry =
+      typeof country === 'string' &&
+      typeof c?.name === 'string' &&
+      country.trim().toLowerCase() === c.name.trim().toLowerCase();
+
+    // Only reset timezone when switching to a different country.
+    // If the user re-opens a multi-timezone country they already selected,
+    // keep the previously selected city highlighted.
+    if (!isSameCountry) {
+      setCountry(c.name);
+      setCountryTimezone(null);
+    }
+
+    // Always set/refresh label (safe even when same country).
+    setCountryLabel(c.label || `${c.code || ''} ${c.name || ''}`.trim() || c.name);
     setSelectedCountry(c);
     setTimezones([]);
     setTzError('');
@@ -130,7 +153,8 @@ export default function CountryToggle({ compact = false }) {
       return;
     }
 
-    // Load city / timezone options for this country.
+    // For multi-timezone countries, switch to city view and load timezones.
+    setView('timezones');
     setTzLoading(true);
     api(`/countries/${c.id}/timezones`, { method: 'GET' })
       .then((res) => {
@@ -155,10 +179,13 @@ export default function CountryToggle({ compact = false }) {
 
   const handleSelectTimezone = (tz) => {
     setCountryTimezone(tz.id);
-    setOpen(false);
+    // After choosing a city, go back to country list while keeping dropdown open.
+    setView('countries');
+    setSelectedCountry(null);
+    setTimezones([]);
   };
 
-  const currentLabel = country || 'Select Country';
+  const currentLabel = countryLabel || country || 'Select Country';
 
   const triggerStyles = (theme) => {
     const isDark = theme.palette.mode === 'dark';
@@ -186,18 +213,28 @@ export default function CountryToggle({ compact = false }) {
     <>
       {compact ? (
         <IconButton
+          ref={anchorRef}
           size="small"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen((prev) => !prev);
+            setView('countries');
+          }}
           sx={(theme) => triggerStyles(theme)}
           aria-label="Select country"
+          aria-haspopup="listbox"
+          aria-expanded={open}
         >
           <PublicIcon sx={{ fontSize: 18 }} />
         </IconButton>
       ) : (
         <Button
+          ref={anchorRef}
           variant="outlined"
           size="small"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen((prev) => !prev);
+            setView('countries');
+          }}
           sx={(theme) => ({
             ...triggerStyles(theme),
             textTransform: 'none',
@@ -206,147 +243,157 @@ export default function CountryToggle({ compact = false }) {
             borderRadius: '20px',
           })}
           startIcon={<PublicIcon sx={{ fontSize: 16 }} />}
+          aria-haspopup="listbox"
+          aria-expanded={open}
         >
           {currentLabel}
         </Button>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            pr: 4,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Select Country
-          </Typography>
-          <IconButton
-            aria-label="Close"
-            size="small"
-            onClick={() => setOpen(false)}
-            sx={{ ml: 1 }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ mb: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search countries…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </Box>
+      <Popover
+        open={open}
+        anchorEl={anchorRef.current}
+        onClose={() => setOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 320,
+              maxWidth: 420,
+              maxHeight: 'min(80vh, 480px)',
+              mt: 1.5,
+              borderRadius: 2,
+              boxShadow: 4,
+            },
+          },
+        }}
+      >
+        <Box sx={{ p: 2, pt: 1.5 }}>
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '1.1fr 1fr' },
-              gap: 2,
-              alignItems: 'flex-start',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 1.5,
             }}
           >
-            {/* Left: country list */}
-            <Box>
-              {loading ? (
-                <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-                  <CircularProgress size={24} />
-                </Box>
-              ) : error ? (
-                <Typography variant="body2" color="error">
-                  {error}
-                </Typography>
-              ) : remoteLoading ? (
-                <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-                  <CircularProgress size={24} />
-                </Box>
-              ) : remoteError ? (
-                <Typography variant="body2" color="error">
-                  {remoteError}
-                </Typography>
-              ) : filteredCountries.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No countries match your search.
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {filteredCountries.map((c) => (
-                    <ListItemButton
-                      key={c.id || c.code || c.name}
-                      onClick={() => handleSelectCountry(c)}
-                      selected={selectedCountry ? selectedCountry.id === c.id : c.name === country}
-                    >
-                      <ListItemText
-                        primary={c.name}
-                        secondary={
-                          c.code || c.currency
-                            ? [c.code, c.currency].filter(Boolean).join(' · ')
-                            : undefined
-                        }
-                        primaryTypographyProps={{ variant: 'body2' }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              )}
-            </Box>
-
-            {/* Right: timezone list for multi-timezone countries */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {selectedCountry?.hasMultipleTimezones ? (
-                <>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    City / time zone
-                  </Typography>
-                  {tzLoading ? (
-                    <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-                      <CircularProgress size={20} />
-                    </Box>
-                  ) : tzError ? (
-                    <Typography variant="body2" color="error">
-                      {tzError}
-                    </Typography>
-                  ) : timezones.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No cities configured yet.
-                    </Typography>
-                  ) : (
-                    <List dense disablePadding sx={{ maxHeight: 260, overflow: 'auto' }}>
-                      {timezones.map((tz) => (
-                        <ListItemButton
-                          key={tz.id}
-                          onClick={() => handleSelectTimezone(tz)}
-                          selected={tz.id === countryTimezoneId}
-                        >
-                          <ListItemText
-                            primary={tz.cityName}
-                            secondary={
-                              [tz.timeShort, tz.countryCode, tz.currency]
-                                .filter(Boolean)
-                                .join(' · ')
-                            }
-                            primaryTypographyProps={{ variant: 'body2' }}
-                            secondaryTypographyProps={{ variant: 'caption' }}
-                          />
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  )}
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Select a country with multiple time zones (e.g. US, Canada) to choose a city.
-                </Typography>
-              )}
-            </Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {view === 'countries'
+                ? 'Select Country'
+                : selectedCountry?.name || 'Select City / Time Zone'}
+            </Typography>
+            {view === 'timezones' && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setView('countries');
+                  setSelectedCountry(null);
+                  setTimezones([]);
+                  setTzError('');
+                }}
+                sx={{ textTransform: 'none', fontSize: 11, minWidth: 'auto' }}
+              >
+                Back
+              </Button>
+            )}
           </Box>
-        </DialogContent>
-      </Dialog>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search countries…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={view === 'timezones'}
+            sx={{ mb: 2 }}
+          />
+          <Box sx={{ minHeight: 140, maxHeight: 340, overflow: 'auto' }}>
+            {view === 'countries' ? (
+              <>
+                {loading ? (
+                  <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : error ? (
+                  <Typography variant="body2" color="error">
+                    {error}
+                  </Typography>
+                ) : remoteLoading ? (
+                  <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : remoteError ? (
+                  <Typography variant="body2" color="error">
+                    {remoteError}
+                  </Typography>
+                ) : filteredCountries.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No countries match your search.
+                  </Typography>
+                ) : (
+                  <List dense disablePadding>
+                    {filteredCountries.map((c) => (
+                      <ListItemButton
+                        key={c.id || c.code || c.name}
+                        onClick={() => handleSelectCountry(c)}
+                        selected={c.name === country}
+                      >
+                        <ListItemText
+                          primary={c.name}
+                          secondary={
+                            c.code || c.currency
+                              ? [c.code, c.currency].filter(Boolean).join(' · ')
+                              : undefined
+                          }
+                          primaryTypographyProps={{ variant: 'body2' }}
+                          secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                )}
+              </>
+            ) : (
+              <>
+                {tzLoading ? (
+                  <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CircularProgress size={20} />
+                  </Box>
+                ) : tzError ? (
+                  <Typography variant="body2" color="error">
+                    {tzError}
+                  </Typography>
+                ) : timezones.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No cities configured yet.
+                  </Typography>
+                ) : (
+                  <List dense disablePadding>
+                    {timezones.map((tz) => (
+                      <ListItemButton
+                        key={tz.id}
+                        onClick={() => handleSelectTimezone(tz)}
+                        selected={tz.id === countryTimezoneId}
+                      >
+                        <ListItemText
+                          primary={tz.cityName}
+                          secondary={
+                            [tz.timeShort, tz.countryCode, tz.currency]
+                              .filter(Boolean)
+                              .join(' · ')
+                          }
+                          primaryTypographyProps={{ variant: 'body2' }}
+                          secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                )}
+              </>
+            )}
+          </Box>
+        </Box>
+      </Popover>
     </>
   );
 }
