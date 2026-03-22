@@ -24,7 +24,7 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
-              {/* Policy routes - underscore & hyphen variants for PhonePe KYC URLs */}
+              {/* Policy routes */}
               <Route path="/terms-and-conditions" element={<Policy />} />
               <Route path="/privacy-policy" element={<Policy />} />
               <Route path="/refund-policy" element={<Policy />} />

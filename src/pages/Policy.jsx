@@ -1,6 +1,6 @@
 /**
  * Policy.jsx - Displays legal policy documents (Privacy, Refund, Terms, Cookie, Legal Disclaimer).
- * Routes match PhonePe merchant registration requirements:
+ * Routes match payment gateway compliance requirements:
  * /privacy_policy, /refund_policy, /terms-and-conditions, /cookie_policy, /legal_disclaimer
  */
 

@@ -167,6 +167,7 @@ export default function Settings() {
 
 function SubscriptionSection() {
   const { refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [error, setError] = useState('');
   const [serverPlans, setServerPlans] = useState([]);
@@ -218,25 +219,10 @@ function SubscriptionSection() {
     };
   });
 
-  const handlePlanClick = async (planId) => {
+  const handlePlanClick = (planId) => {
     setError('');
     setLoadingPlan(planId);
-    try {
-      const res = await api('/payments/phonepe/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ plan: planId }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || 'Failed to start PhonePe checkout');
-      }
-      const d = await res.json();
-      if (!d.url) throw new Error('PhonePe checkout URL missing');
-      window.location.href = d.url;
-    } catch (err) {
-      setError(err.message || 'Payment initialization failed');
-      setLoadingPlan(null);
-    }
+    navigate(`/checkout?plan=${encodeURIComponent(planId)}`);
   };
 
   return (
@@ -359,10 +345,10 @@ function SubscriptionSection() {
                   {loadingPlan === plan.id ? (
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       <CircularProgress size={12} sx={{ color: 'primary.main' }} />
-                      Redirecting to PhonePe…
+                      Opening Razorpay…
                     </Box>
                   ) : (
-                    'Continue to PhonePe →'
+                    'Continue to Razorpay →'
                   )}
                 </Typography>
               </CardContent>

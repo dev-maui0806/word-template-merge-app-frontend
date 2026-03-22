@@ -974,7 +974,7 @@ export default function Admin() {
               Subscription plans
             </Typography>
             <Typography variant="body2" color="rgba(255,255,255,0.7)" sx={{ mb: 3 }}>
-              Update the subscription price for each plan. Changes apply to new PhonePe checkouts immediately.
+              Update the subscription price for each plan. Changes apply to new Razorpay checkouts immediately.
             </Typography>
             <TableContainer
               component={Paper}

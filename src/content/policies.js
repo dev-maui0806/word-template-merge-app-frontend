@@ -1,5 +1,5 @@
 /**
- * Policy document content for PhonePe merchant registration (KYC).
+ * Policy document content for payment gateway compliance.
  * URLs: /privacy_policy, /refund_policy, /terms-and-conditions, /cookie_policy, /legal_disclaimer
  */
 
@@ -90,7 +90,7 @@ We do not sell or rent personal information.
 
 We may share information with:
 
-* Payment processors (including PhonePe)
+* Payment processors (including Razorpay)
 * Hosting and cloud service providers
 * Technical service providers
 * Legal authorities if required by law
@@ -222,7 +222,7 @@ No refunds shall be provided for:
 
 ## 5. Failed or Disputed Transactions
 
-Payments are processed via PhonePe or authorized payment gateways.
+Payments are processed via Razorpay or authorized payment gateways.
 
 In case of:
 
@@ -382,7 +382,7 @@ Applicable GST shall be charged as per Indian law.
 
 ### 5.4 Payment Processing
 
-Payments are processed through PhonePe or authorized third-party payment gateways.
+Payments are processed through Razorpay or authorized third-party payment gateways.
 We are not responsible for:
 
 * Gateway failures
@@ -656,7 +656,7 @@ Where enabled, the Platform may collect IP-based or GPS location data for:
 
 We may use third-party services such as:
 
-* Payment processors (e.g., PhonePe)
+* Payment processors (e.g., Razorpay)
 * Hosting providers
 * Analytics tools
 

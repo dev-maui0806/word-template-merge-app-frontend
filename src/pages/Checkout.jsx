@@ -15,8 +15,6 @@ export default function Checkout() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const planParam = params.get('plan') || 'monthly';
-  const transactionId = params.get('transactionId') || '';
-  const isMockReturn = params.get('mock') === '1';
 
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
@@ -36,7 +34,7 @@ export default function Checkout() {
           setPlans(Array.isArray(data) ? data : []);
         }
       } catch {
-        // Fallback to static prices if API fails; PhonePe will still use DB prices
+        // Fallback to static prices if API fails; backend still uses DB prices
         if (!cancelled) {
           setPlans([]);
         }
@@ -79,107 +77,88 @@ export default function Checkout() {
 
   const canPay = useMemo(() => !!planId, [planId]);
 
-  const pollStatus = async (merchantOrderId) => {
-    const res = await api(`/payments/phonepe/order/${encodeURIComponent(merchantOrderId)}/status`, {
-      method: 'GET',
+  const loadRazorpayCheckoutScript = () =>
+    new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
     });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      throw new Error(d.error || 'Failed to fetch payment status');
-    }
-    return await res.json();
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!transactionId) return;
-
-    const run = async () => {
-      try {
-        setError('');
-        setStatus('Verifying payment status…');
-        // Poll a few times; webhook can be slightly delayed.
-        for (let i = 0; i < 12 && !cancelled; i++) {
-          const d = await pollStatus(transactionId);
-          if (d.warning) {
-            setError('');
-            setStatus(d.warning);
-          }
-          if (d.status === 'SUCCESS') {
-            setStatus('Payment successful. Activating your subscription…');
-            setTimeout(() => {
-              if (!cancelled) navigate('/settings?payment=success', { replace: true });
-            }, 600);
-            return;
-          }
-          if (d.status === 'FAILED') {
-            setStatus('');
-            setError('Payment failed or was cancelled. Please try again.');
-            return;
-          }
-          // INITIATED / PENDING
-          if (!d.warning) {
-            setStatus('Payment pending. Waiting for confirmation…');
-          }
-          await new Promise((r) => setTimeout(r, 1500));
-        }
-        if (!cancelled) {
-          setStatus('');
-          setError('Payment is still pending. If you cancelled, you can safely retry.');
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setStatus('');
-          setError('We couldn’t confirm the payment yet. If you cancelled, you can safely retry.');
-        }
-      }
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [transactionId, navigate]);
 
   const handlePay = async () => {
     if (!canPay) return;
     setError('');
+    setStatus('');
     setLoading(true);
     try {
-      const res = await api('/payments/phonepe/checkout', {
+      const scriptOk = await loadRazorpayCheckoutScript();
+      if (!scriptOk) {
+        throw new Error('Unable to load Razorpay checkout. Please check your internet connection.');
+      }
+
+      const res = await api('/payments/razorpay/order', {
         method: 'POST',
         body: JSON.stringify({ plan: planId }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || 'Failed to start PhonePe checkout');
+        throw new Error(d.error || 'Failed to initialize Razorpay checkout');
       }
-      const d = await res.json();
-      if (!d.url) throw new Error('PhonePe checkout URL missing');
-      window.location.href = d.url;
+      const order = await res.json();
+      if (!order?.orderId || !order?.keyId) {
+        throw new Error('Razorpay order initialization response is incomplete');
+      }
+
+      const rz = new window.Razorpay({
+        key: order.keyId,
+        order_id: order.orderId,
+        amount: order.amountPaise,
+        currency: order.currency || 'INR',
+        name: order.name || 'Field Agent Report',
+        description: order.description || `Subscription ${name}`,
+        prefill: order.prefill || {},
+        notes: order.notes || {},
+        theme: { color: '#ef4444' },
+        handler: async (response) => {
+          try {
+            setStatus('Verifying payment...');
+            const verifyRes = await api('/payments/razorpay/verify', {
+              method: 'POST',
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              }),
+            });
+            if (!verifyRes.ok) {
+              const d = await verifyRes.json().catch(() => ({}));
+              throw new Error(d.error || 'Payment verification failed');
+            }
+            setStatus('Payment successful. Activating your subscription...');
+            setTimeout(() => {
+              navigate('/settings?payment=success', { replace: true });
+            }, 500);
+          } catch (verifyErr) {
+            setStatus('');
+            setError(verifyErr.message || 'Payment verification failed');
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setStatus('');
+            setError('Payment was cancelled before completion.');
+          },
+        },
+      });
+
+      rz.open();
     } catch (err) {
       setError(err.message || 'Payment initialization failed');
-      setLoading(false);
-    }
-  };
-
-  const handleMockSettle = async (state) => {
-    if (!transactionId) return;
-    setError('');
-    setLoading(true);
-    try {
-      const res = await api('/payments/phonepe/mock/settle', {
-        method: 'POST',
-        body: JSON.stringify({ merchantOrderId: transactionId, state }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || 'Mock settle failed');
-      }
-      // Trigger a status poll immediately.
-      setLoading(false);
-    } catch (e) {
-      setError(e.message || 'Mock settle failed');
       setLoading(false);
     }
   };
@@ -200,11 +179,6 @@ export default function Checkout() {
                 {name} {price ? `– ${price}` : ''}
               </strong>
             </Typography>
-            {!!transactionId && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Order: <strong>{transactionId}</strong>
-              </Typography>
-            )}
             {status && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 {status}
@@ -220,43 +194,14 @@ export default function Checkout() {
                 variant="contained"
                 color="primary"
                 onClick={handlePay}
-                disabled={loading || !!transactionId}
+                disabled={loading}
               >
-                {loading ? 'Redirecting…' : 'Continue to PhonePe'}
+                {loading ? 'Opening Razorpay…' : 'Continue to Razorpay'}
               </Button>
               <Button variant="outlined" onClick={() => navigate('/settings')} disabled={loading}>
                 Back to settings
               </Button>
             </Box>
-
-            {isMockReturn && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Test mode
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  PhonePe KYC is pending. Use these buttons to simulate a callback.
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={() => handleMockSettle('COMPLETED')}
-                    disabled={loading || !transactionId}
-                  >
-                    Simulate Success
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    onClick={() => handleMockSettle('FAILED')}
-                    disabled={loading || !transactionId}
-                  >
-                    Simulate Failure
-                  </Button>
-                </Box>
-              </Box>
-            )}
           </CardContent>
         </Card>
       </Container>
