@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import Home from './pages/Home.jsx';
 import Form from './pages/Form.jsx';
+import DocumentPreviewPage from './pages/DocumentPreviewPage.jsx';
 import Admin from './pages/Admin.jsx';
 import Settings from './pages/Settings.jsx';
 import Checkout from './pages/Checkout.jsx';
@@ -43,6 +44,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Form />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/form/:actionSlug/preview"
+                element={
+                  <ProtectedRoute>
+                    <DocumentPreviewPage />
                   </ProtectedRoute>
                 }
               />

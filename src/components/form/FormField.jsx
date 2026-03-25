@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import DateWheelPickerDialog from '../pickers/DateWheelPickerDialog.jsx';
 import TimeWheelPickerDialog from '../pickers/TimeWheelPickerDialog.jsx';
+import { resolveFieldPlaceholder } from '../../utils/fieldPlaceholder.js';
 
 function AutoBadge() {
   return (
@@ -19,7 +20,7 @@ function AutoBadge() {
 }
 
 function FieldShell({ label, children, error, rightMeta, clientCard }) {
-  const labelCls = clientCard ? 'text-[15px] font-bold text-slate-900' : 'text-[12px] font-medium text-slate-700';
+  const labelCls = clientCard ? 'text-[#364153] text-[15px] font-semibold text-slate-900' : 'text-[#364153] text-[12px] font-medium text-slate-700';
   return (
     <div className="w-full">
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -34,11 +35,11 @@ function FieldShell({ label, children, error, rightMeta, clientCard }) {
 
 function clientInputClass({ clientCard, computed, hasValue }) {
   if (!clientCard) {
-    return 'h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-[13px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200';
+    return 'h-14 w-full rounded-xl border border-slate-200 bg-white px-3 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200';
   }
   const color = computed && hasValue ? 'text-[#4f46e5]' : 'text-slate-800';
   return [
-    'h-11 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[15px] font-medium placeholder:text-slate-400 placeholder:font-normal shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100',
+    'h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[17px] font-medium placeholder:text-slate-400 placeholder:font-normal shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300',
     color,
   ].join(' ');
 }
@@ -105,9 +106,9 @@ export default function FormField({
   error,
   clientCard = false,
 }) {
-  const { name, type, label, placeholder, options = [], fullWidth, computed: fieldComputed } = field;
-  // Some templates may not flag computed fields in metadata; keep UI consistent for known computed vars.
-  const computed = !!fieldComputed || name === 'Date_of_FR';
+  const { name, type, label, options = [], fullWidth, computed: fieldComputed, autoBadge: fieldAutoBadge } = field;
+  const computed = !!fieldComputed;
+  const effectivePlaceholder = resolveFieldPlaceholder(field);
 
   const safeChange = (n, v) => {
     if (computed) return;
@@ -118,7 +119,7 @@ export default function FormField({
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  const autoMeta = computed ? <AutoBadge /> : null;
+  const autoMeta = computed || fieldAutoBadge ? <AutoBadge /> : null;
   const hasVal = (v) => v != null && String(v).trim() !== '';
 
   if (type === 'text') {
@@ -128,7 +129,7 @@ export default function FormField({
         <InputBase
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
-          placeholder={placeholder}
+          placeholder={effectivePlaceholder}
           readOnly={computed}
           className={[base, computed ? 'cursor-default' : ''].join(' ')}
         />
@@ -139,15 +140,15 @@ export default function FormField({
   if (type === 'textarea') {
     const base = [
       clientCard
-        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[15px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100'
-        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200',
+        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[17px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100'
+        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200',
     ].join(' ');
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <TextAreaBase
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
-          placeholder={placeholder}
+          placeholder={effectivePlaceholder}
           readOnly={computed}
           className={[base, computed ? 'cursor-default' : ''].join(' ')}
         />
@@ -157,24 +158,27 @@ export default function FormField({
 
   if (type === 'date' && computed) {
     const raw = value ?? '';
-    const dateValue = raw && dayjs(raw).isValid() ? dayjs(raw) : null;
-    const display = dateValue ? (clientCard ? dateValue.format('MM/DD/YYYY') : dateValue.format('DD/MM/YYYY')) : String(raw);
-
+    const d = raw ? dayjs(raw) : null;
+    const display =
+      raw && d?.isValid() ? (clientCard ? d.format('MM/DD/YYYY') : d.format('DD/MM/YYYY')) : String(raw || '');
     const base = clientInputClass({ clientCard, computed: true, hasValue: hasVal(display) });
     return (
-      <FieldShell label={label} error={error} clientCard={clientCard}>
+      <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <div className="relative">
           <InputBase
             value={display}
             onChange={() => {}}
-            placeholder={placeholder}
+            placeholder={effectivePlaceholder}
             readOnly
-            onClick={() => {}}
-            className={[base, 'cursor-default pr-16'].join(' ')}
+            className={[base, 'cursor-default pr-10'].join(' ')}
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <AutoBadge />
-          </div>
+          <InputIcon>
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 2v3M16 2v3" />
+              <path d="M3 9h18" />
+              <path d="M5 5h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+            </svg>
+          </InputIcon>
         </div>
       </FieldShell>
     );
@@ -183,11 +187,10 @@ export default function FormField({
   if (type === 'date') {
     const dateValue = value && dayjs(value).isValid() ? dayjs(value) : null;
     const display = dateValue ? (clientCard ? dateValue.format('MM/DD/YYYY') : dateValue.format('DD/MM/YYYY')) : '';
-    const effectivePlaceholder = placeholder || (name === 'Event_Date' ? 'mm/dd/yyyy' : '');
     const base = clientInputClass({ clientCard, computed: false, hasValue: hasVal(display) });
     return (
       <>
-        <FieldShell label={label} error={error} clientCard={clientCard}>
+        <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
             <InputBase
               value={display}
@@ -232,7 +235,7 @@ export default function FormField({
             <InputBase
               value={display}
               onChange={() => {}}
-              placeholder={placeholder}
+              placeholder={effectivePlaceholder}
               readOnly
               className={[base, 'cursor-default pr-10'].join(' ')}
             />
@@ -254,7 +257,7 @@ export default function FormField({
             <InputBase
               value={display}
               onChange={() => {}}
-              placeholder={placeholder}
+              placeholder={effectivePlaceholder}
               readOnly
               onClick={() => setTimePickerOpen(true)}
               className={[base, 'cursor-pointer pr-10'].join(' ')}
@@ -280,15 +283,16 @@ export default function FormField({
   }
 
   if (type === 'number') {
-    const base = clientInputClass({ clientCard, computed: false, hasValue: hasVal(value) });
+    const base = clientInputClass({ clientCard, computed, hasValue: hasVal(value) });
     return (
-      <FieldShell label={label} error={error} clientCard={clientCard}>
+      <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <InputBase
-          type="number"
+          type={computed ? 'text' : 'number'}
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
-          placeholder={placeholder}
-          className={base}
+          placeholder={effectivePlaceholder}
+          readOnly={computed}
+          className={[base, computed ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
     );
@@ -301,7 +305,7 @@ export default function FormField({
           <InputBase
             value={value ?? ''}
             onChange={(e) => safeChange(name, e.target.value)}
-            placeholder={placeholder}
+            placeholder={effectivePlaceholder}
             className={clientInputClass({ clientCard, computed: false, hasValue: hasVal(value) })}
           />
         </FieldShell>
@@ -463,7 +467,7 @@ export default function FormField({
       <InputBase
         value={value ?? ''}
         onChange={(e) => safeChange(name, e.target.value)}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         className={clientInputClass({ clientCard, computed: false, hasValue: hasVal(value) })}
       />
     </FieldShell>

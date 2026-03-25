@@ -17,7 +17,7 @@ import { api } from '../api/client.js';
 
 export default function Home() {
   const { user, refreshUser } = useAuth();
-  const { country, countryTimezoneId } = useApp();
+  const { country, countryTimezoneId, setCountry, setCountryLabel, setCountryTimezone } = useApp();
   const [timeData, setTimeData] = useState(null);
   const [timeError, setTimeError] = useState('');
   const docCount = user?.trialDocCount ?? 0;
@@ -84,6 +84,18 @@ export default function Home() {
   useEffect(() => {
     refreshUser?.();
   }, [refreshUser]);
+
+  // Default country from detected signup country (only when app is still on default India).
+  useEffect(() => {
+    const detected = String(user?.signupCountry || '').trim();
+    if (!detected) return;
+    const current = String(country || '').trim();
+    if (!current || current.toLowerCase() === 'india') {
+      setCountry(detected);
+      setCountryLabel(detected);
+      setCountryTimezone(null);
+    }
+  }, [user?.signupCountry, country, setCountry, setCountryLabel, setCountryTimezone]);
 
   let trialMessage = '';
   if (isTrial && !isAdminUser) {

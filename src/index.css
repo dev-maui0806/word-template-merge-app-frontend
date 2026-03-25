@@ -59,3 +59,13 @@ a {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Full-page document preview: print / Save as PDF */
+@media print {
+  .document-preview-print-root .no-print {
+    display: none !important;
+  }
+  .document-preview-print-root {
+    background: #fff !important;
+  }
+}

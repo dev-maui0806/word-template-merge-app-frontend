@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Button, Card, CardContent, Typography, Container, Alert } from '@mui/material';
 import Header from '../components/Header.jsx';
 import { api } from '../api/client.js';
+import { useApp } from '../context/AppContext.jsx';
 
 const FALLBACK_PLANS = {
   monthly: { id: 'monthly', name: 'Monthly', amountRupees: 799 },
@@ -13,6 +14,7 @@ const FALLBACK_PLANS = {
 export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { country, countryTimezoneId } = useApp();
   const params = new URLSearchParams(location.search);
   const planParam = params.get('plan') || 'monthly';
 
@@ -27,7 +29,11 @@ export default function Checkout() {
     const fetchPlans = async () => {
       setLoadingPlans(true);
       try {
-        const res = await api('/payments/plans', { method: 'GET' });
+        const params = new URLSearchParams();
+        if (country) params.set('country', country);
+        if (countryTimezoneId) params.set('timezoneId', countryTimezoneId);
+        const q = params.toString();
+        const res = await api(`/payments/plans${q ? `?${q}` : ''}`, { method: 'GET' });
         if (!res.ok) throw new Error('Failed to load subscription prices');
         const data = await res.json();
         if (!cancelled) {
@@ -48,32 +54,42 @@ export default function Checkout() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [country, countryTimezoneId]);
 
   const selectedPlan = useMemo(() => {
     const fromServer = plans.find((p) => p.id === planParam);
     if (fromServer) {
-      const price =
+      const inrPrice =
         typeof fromServer.amountRupees === 'number' && Number.isFinite(fromServer.amountRupees)
           ? `₹${fromServer.amountRupees.toLocaleString('en-IN')}`
+          : undefined;
+      const localPrice =
+        typeof fromServer.localAmount === 'number' &&
+        Number.isFinite(fromServer.localAmount) &&
+        fromServer.localCurrency &&
+        fromServer.localCurrency !== 'INR'
+          ? `${fromServer.localCurrency} ${fromServer.localAmount.toLocaleString('en-US')}`
           : undefined;
       return {
         id: fromServer.id,
         name: fromServer.name,
-        price,
+        inrPrice,
+        localPrice,
       };
     }
     const fallback = FALLBACK_PLANS[planParam] || FALLBACK_PLANS.monthly;
     return {
       id: fallback.id,
       name: fallback.name,
-      price: `₹${fallback.amountRupees.toLocaleString('en-IN')}`,
+      inrPrice: `₹${fallback.amountRupees.toLocaleString('en-IN')}`,
+      localPrice: undefined,
     };
   }, [plans, planParam]);
 
   const planId = selectedPlan.id;
   const name = selectedPlan.name;
-  const price = selectedPlan.price;
+  const inrPrice = selectedPlan.inrPrice;
+  const localPrice = selectedPlan.localPrice;
 
   const canPay = useMemo(() => !!planId, [planId]);
 
@@ -176,9 +192,14 @@ export default function Checkout() {
             <Typography variant="body1" sx={{ mb: 1 }}>
               Selected plan:{' '}
               <strong>
-                {name} {price ? `– ${price}` : ''}
+                {name} {localPrice ? `– ${localPrice}` : inrPrice ? `– ${inrPrice}` : ''}
               </strong>
             </Typography>
+            {localPrice && inrPrice ? (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                INR equivalent: {inrPrice}
+              </Typography>
+            ) : null}
             {status && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 {status}

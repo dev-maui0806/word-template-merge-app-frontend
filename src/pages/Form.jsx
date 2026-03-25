@@ -3,13 +3,16 @@
  * Fetches field metadata from backend, renders inputs, submits to generate endpoint.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import FormField from '../components/form/FormField.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { api } from '../api/client.js';
-import { computeTemplateFormDerived, isHiddenFromFormUiClient } from '../utils/templateFormDerived.js';
+import { computeTemplateFormDerived } from '../utils/templateFormDerived.js';
+import { isDateOfFRVariableName } from '../utils/dateOfFRField.js';
+import { savePreviewDraft } from '../utils/previewDraftStore.js';
+import { resolveFieldPlaceholder } from '../utils/fieldPlaceholder.js';
 
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024; // hard safety cap before compression
 
@@ -163,16 +166,16 @@ function CardShell({ title, children, actions, className, contentClassName }) {
   return (
     <div
       className={[
-        'rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]',
+        'rounded-[20px] border border-slate-200/80 bg-white p-8 shadow-[0_10px_30px_rgba(15,23,42,0.06)]',
         className || '',
       ].join(' ')}
     >
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-50 text-rose-500 ring-1 ring-rose-100">
+          <div className="flex h-10 w-10 mr-1 items-center justify-center rounded-xl bg-rose-50 text-rose-500 ring-1 ring-rose-100">
             <CardSectionIcon title={title} />
           </div>
-          <div className="text-[15px] font-semibold text-slate-900">{title}</div>
+          <div style={{fontFamily:"sans-serif"}} className="text-[1.25rem] font-bold text-slate-900 font-Inter">{title}</div>
         </div>
         {actions}
       </div>
@@ -197,6 +200,37 @@ function PillToggle({ active, onClick, children }) {
 }
 
 function TypeToggle({ value, options, onChange }) {
+  const containerRef = useRef(null);
+  const [slider, setSlider] = useState({ left: 0, width: 0 });
+
+  const activeIndex = Math.max(
+    0,
+    options.findIndex((o) => (value ?? '') === o)
+  );
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const buttons = el.querySelectorAll('[data-toggle-segment]');
+      const btn = buttons[activeIndex];
+      if (!btn) return;
+      const cr = el.getBoundingClientRect();
+      const br = btn.getBoundingClientRect();
+      setSlider({ left: br.left - cr.left, width: br.width });
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(update));
+    const ro = new ResizeObserver(() => update());
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [activeIndex, options]);
+
   const iconFor = (opt) => {
     const v = String(opt || '').toLowerCase().replace(/\s+/g, '');
     if (v.includes('virtual')) {
@@ -233,19 +267,32 @@ function TypeToggle({ value, options, onChange }) {
   };
 
   return (
-    <div className="flex items-center rounded-[16px] border border-slate-200 bg-white p-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+    <div
+      ref={containerRef}
+      className="relative flex items-center rounded-[16px] border border-slate-200 bg-white p-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]"
+    >
+      <div
+        aria-hidden
+        className={[
+          'pointer-events-none absolute left-0 top-1 bottom-1 rounded-[14px] border border-rose-200 bg-rose-50 shadow-[0_6px_16px_rgba(244,63,94,0.10)] transition-[transform,width,opacity] duration-[680ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+          slider.width > 0 ? 'opacity-100' : 'opacity-0',
+        ].join(' ')}
+        style={{
+          width: slider.width,
+          transform: `translate3d(${slider.left}px, 0, 0)`,
+        }}
+      />
       {options.map((opt) => {
         const active = (value ?? '') === opt;
         return (
           <button
             key={opt}
             type="button"
+            data-toggle-segment
             onClick={() => onChange(opt)}
             className={[
-              'inline-flex h-10 items-center gap-2 rounded-[14px] px-4 text-[14px] font-semibold transition',
-              active
-                ? 'border border-rose-200 bg-rose-50 text-rose-600 shadow-[0_6px_16px_rgba(244,63,94,0.10)]'
-                : 'border border-transparent text-slate-600 hover:bg-slate-50',
+              'relative z-10 inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] px-4 text-[14px] font-semibold transition-[color] duration-500 ease-out',
+              active ? 'text-rose-600' : 'text-slate-600 hover:text-slate-800',
             ].join(' ')}
           >
             {iconFor(opt)}
@@ -265,14 +312,22 @@ function slugToTitle(slug) {
     .join(' ');
 }
 
-/** Multi-column flow so cards pack vertically without large empty gaps (CSS columns). */
+/** CSS columns: cards pack top-to-bottom per column to avoid large empty gaps beside short cards. */
 function TemplateMasonry({ children }) {
   return <div className="columns-1 md:columns-2 [column-gap:1.5rem]">{children}</div>;
 }
 
-function MasonrySection({ fullWidth, children }) {
+function MasonrySection({ fullWidth, spacedTop, children }) {
   return (
-    <div className={['pb-6 break-inside-avoid', fullWidth ? '[column-span:all]' : ''].filter(Boolean).join(' ')}>
+    <div
+      className={[
+        'mb-6 break-inside-avoid',
+        fullWidth ? '[column-span:all]' : '',
+        spacedTop ? 'mt-8' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {children}
     </div>
   );
@@ -291,12 +346,6 @@ export default function Form() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState('');
-  const [previewBlob, setPreviewBlob] = useState(null);
-  const [previewEditing, setPreviewEditing] = useState(false);
-  const [previewEditedHtml, setPreviewEditedHtml] = useState('');
-  const previewContentRef = useRef(null);
   const [claimantOptions, setClaimantOptions] = useState([]);
 
   const imageFieldNames = useMemo(() => {
@@ -312,18 +361,19 @@ export default function Form() {
     [metadata]
   );
 
-  /** Client preview for computed vars — align with backend `runAutomation` for ALL actions. */
   const templateDerived = useMemo(() => computeTemplateFormDerived(data), [data]);
 
   const getFieldValue = useCallback(
     (f) => {
       if (!f) return undefined;
       if (f.type === 'image') return images[f.name];
-      if (f.name === 'Event_Type') return getEventTypeForBackend() || data[f.name] || '';
+      if (f.name === 'Event_Type' && (f.computed || actionSlug === 'arrange-venue')) {
+        return getEventTypeForBackend() || data[f.name] || '';
+      }
       if (f.computed) return templateDerived[f.name] ?? '';
       return data[f.name];
     },
-    [data, images, templateDerived, getEventTypeForBackend]
+    [actionSlug, data, images, templateDerived, getEventTypeForBackend]
   );
 
   useEffect(() => {
@@ -344,6 +394,7 @@ export default function Form() {
         const initial = {};
         for (const f of meta.fields || []) {
           if (f.computed) continue;
+          if (isDateOfFRVariableName(f.name)) continue;
           if (f.type === 'select' && f.options?.length) initial[f.name] = f.default ?? f.options[f.options.length - 1] ?? f.options[0] ?? '';
           else initial[f.name] = '';
         }
@@ -357,6 +408,46 @@ export default function Form() {
       });
     return () => { cancelled = true; };
   }, [actionSlug]);
+
+  // Date of FR (any template alias): today in the selected country's time zone (not tied to Event_Date).
+  useEffect(() => {
+    if (!metadata?.fields?.some((f) => isDateOfFRVariableName(f.name))) return;
+    if (!country) return;
+    let cancelled = false;
+    const params = new URLSearchParams();
+    params.set('country', country);
+    if (countryTimezoneId) params.set('timezoneId', countryTimezoneId);
+    api(`/countries/current-time?${params.toString()}`, { method: 'GET' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('time'))))
+      .then((d) => {
+        if (cancelled || !d?.isoDate) return;
+        setData((prev) => {
+          const next = { ...prev };
+          for (const f of metadata.fields || []) {
+            if (isDateOfFRVariableName(f.name)) next[f.name] = d.isoDate;
+          }
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          const fallback = new Date().toISOString().slice(0, 10);
+          setData((prev) => {
+            const next = { ...prev };
+            for (const f of metadata.fields || []) {
+              if (!isDateOfFRVariableName(f.name)) continue;
+              const cur = next[f.name];
+              if (cur != null && String(cur).trim()) continue;
+              next[f.name] = fallback;
+            }
+            return next;
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [metadata, country, countryTimezoneId]);
 
   // Load claimant name suggestions from history (File Manager) for autosuggest.
   useEffect(() => {
@@ -534,106 +625,27 @@ export default function Form() {
     }
   };
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     setError('');
     setSuccess('');
-    // Preview opens even with no variable fields entered; backend handles empty values in preview mode.
-    setSubmitLoading(true);
     try {
-      const res = await api(`/generate/${actionSlug}`, {
-        method: 'POST',
-        body: JSON.stringify({ ...buildPayload(), preview: true }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || 'Failed to preview');
-      }
-      const blob = await res.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      const { default: mammoth } = await import('mammoth');
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      const html = result.value;
-      setPreviewHtml(html);
-      setPreviewEditedHtml(html);
-      setPreviewBlob(blob);
-      setPreviewOpen(true);
-      setPreviewEditing(false);
-      setSuccess('Document preview generated successfully!');
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(''), 5000);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
-  const handleDownloadTemplate = async () => {
-    // If the user has edited the preview HTML, prefer downloading that edited
-    // content as a real DOCX generated server-side (keeps Aptos 13pt).
-    const fromRef = previewContentRef.current?.innerHTML;
-    const editedHtml = fromRef || previewEditedHtml;
-
-    if (editedHtml && editedHtml.trim()) {
-      try {
-        const res = await api(`/generate/${actionSlug}/edited-docx`, {
-          method: 'POST',
-          body: JSON.stringify({ html: editedHtml }),
-        });
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}));
-          throw new Error(d.error || 'Failed to generate edited DOCX');
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${actionSlug}-edited.docx`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } catch (e) {
-        setError(e.message || 'Failed to download edited DOCX');
-      }
+      savePreviewDraft(actionSlug, buildPayload());
+    } catch (e) {
+      setError(
+        e?.message?.includes('QuotaExceeded') || e?.name === 'QuotaExceededError'
+          ? 'Preview data is too large to store (try smaller images).'
+          : 'Could not open preview. Try again with smaller attachments.'
+      );
       return;
     }
-
-    // Fallback: use the DOCX preview generated by the backend.
-    if (!previewBlob) return;
-    const url = URL.createObjectURL(previewBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${actionSlug}-preview.docx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    navigate(`/form/${actionSlug}/preview`);
   };
-
-  const handleSaveAndDownload = async () => {
-    setPreviewOpen(false);
-    setPreviewHtml('');
-    setPreviewBlob(null);
-    setPreviewEditedHtml('');
-    await handleGenerate();
-  };
-
-  // Set content once when dialog opens (uncontrolled - avoids cursor reset on typing)
-  useEffect(() => {
-    if (!previewOpen || !previewHtml) return;
-    const setContent = () => {
-      const el = previewContentRef.current;
-      if (el && !el.innerHTML.trim()) {
-        el.innerHTML = previewHtml;
-      }
-    };
-    setContent();
-    const t = setTimeout(setContent, 50);
-    return () => clearTimeout(t);
-  }, [previewOpen, previewHtml]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f6f7fb] pb-10">
         <Header />
-        <div className="mx-auto max-w-[1024px] px-4 py-8">
+        <div className="mx-auto max-w-[1228px] px-4 py-8">
           <div className="text-[14px] text-slate-600">Loading form…</div>
         </div>
       </div>
@@ -644,7 +656,7 @@ export default function Form() {
     return (
       <div className="min-h-screen bg-[#f6f7fb] pb-10">
         <Header />
-        <div className="mx-auto max-w-[1024px] px-4 py-8">
+        <div className="mx-auto max-w-[1228px] px-4 py-8">
           <AlertBox variant="error">{metaError || metadata?.error || 'Template not found'}</AlertBox>
           <button
             type="button"
@@ -658,7 +670,7 @@ export default function Form() {
     );
   }
 
-  const fields = (metadata.fields || []).filter((f) => f?.name && !isHiddenFromFormUiClient(f.name));
+  const fields = metadata.fields || [];
   // TYPE fields (Meeting_Type, Room_Type, etc.) go in header at top-right; exclude from sections
   const typeFields = fields.filter(
     (f) => f.type === 'select' && f.name !== 'Event_Type' && /_Type$/.test(f.name)
@@ -696,14 +708,15 @@ export default function Form() {
     // Claimant_Name: datalist autosuggest (same styling on all template forms)
     if (f.name === 'Claimant_Name') {
       const listId = `claimant-options-${actionSlug}`;
+      const effectivePlaceholder = resolveFieldPlaceholder(f);
       return (
         <div key={f.name} className={f.fullWidth ? 'col-span-full' : undefined}>
           <div className="w-full">
-            <div className="mb-1.5 text-[15px] font-bold text-slate-900">{f.label}</div>
+            <div style={{fontWeight:500}} className="mb-1.5 text-[15px] font-medium text-slate-900">{f.label}</div>
             <input
               list={listId}
-              className="h-11 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[15px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
-              placeholder={f.placeholder}
+              className="h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[18px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+              placeholder={effectivePlaceholder}
               value={data[f.name] ?? ''}
               onChange={(e) => handleChange(f.name, e.target.value)}
             />
@@ -737,7 +750,7 @@ export default function Form() {
   const renderSectionCard = (title) => {
     const sectionFields = sectionMap[title] || [];
     if (sectionFields.length === 0) return null;
-    const cardPad = 'p-6 md:p-8';
+    const cardPad = 'p-[2.5rem] md:p-[2.5rem]';
     return (
       <CardShell
         title={title}
@@ -755,7 +768,7 @@ export default function Form() {
   return (
     <div className="min-h-screen bg-[#f6f7fb] pb-12">
       <Header />
-      <div className="mx-auto max-w-[1024px] px-4 pt-8">
+      <div className="mx-auto max-w-6xl px-2 pt-8">
         <div className="flex items-center justify-between gap-6">
           <div>
             <button
@@ -802,51 +815,47 @@ export default function Form() {
             <AlertBox variant="info">
               No template variables were detected in this template. If your document uses placeholders like {'{{Variable_Name}}'}, ensure the template file exists and is valid. You can still use Preview or Generate Document.
             </AlertBox>
+          ) : isArrangeVenue ? (
+            <TemplateMasonry>
+              {['Dates', 'Claimant Details', 'Venue Information', 'Times'].map((title) => {
+                const el = renderSectionCard(title);
+                return el ? <MasonrySection key={title}>{el}</MasonrySection> : null;
+              })}
+              {(() => {
+                const el = renderSectionCard('Event Details');
+                return el ? <MasonrySection key="Event Details">{el}</MasonrySection> : null;
+              })()}
+              {(() => {
+                const el = renderSectionCard('Attachments');
+                return el ? (
+                  <MasonrySection key="Attachments" fullWidth spacedTop>
+                    {el}
+                  </MasonrySection>
+                ) : null;
+              })()}
+              {sortedSections
+                .map(([section]) => section)
+                .filter((s) => !['Dates', 'Claimant Details', 'Venue Information', 'Times', 'Event Details', 'Attachments'].includes(s))
+                .map((s) => {
+                  const el = renderSectionCard(s);
+                  return el ? (
+                    <MasonrySection key={s} fullWidth>
+                      {el}
+                    </MasonrySection>
+                  ) : null;
+                })}
+            </TemplateMasonry>
           ) : (
             <TemplateMasonry>
-              {isArrangeVenue ? (
-                <>
-                  {['Dates', 'Claimant Details', 'Venue Information', 'Times'].map((title) => {
-                    const el = renderSectionCard(title);
-                    return el ? <MasonrySection key={title}>{el}</MasonrySection> : null;
-                  })}
-                  {(() => {
-                    const el = renderSectionCard('Event Details');
-                    return el ? <MasonrySection key="Event Details">{el}</MasonrySection> : null;
-                  })()}
-                  {(() => {
-                    const el = renderSectionCard('Attachments');
-                    return el ? (
-                      <MasonrySection key="Attachments" fullWidth>
-                        {el}
-                      </MasonrySection>
-                    ) : null;
-                  })()}
-                  {sortedSections
-                    .map(([section]) => section)
-                    .filter((s) => !['Dates', 'Claimant Details', 'Venue Information', 'Times', 'Event Details', 'Attachments'].includes(s))
-                    .map((s) => {
-                      const el = renderSectionCard(s);
-                      return el ? (
-                        <MasonrySection key={s} fullWidth>
-                          {el}
-                        </MasonrySection>
-                      ) : null;
-                    })}
-                </>
-              ) : (
-                <>
-                  {sortedSections.map(([section]) => {
-                    const el = renderSectionCard(section);
-                    if (!el) return null;
-                    return (
-                      <MasonrySection key={section} fullWidth={section === 'Attachments'}>
-                        {el}
-                      </MasonrySection>
-                    );
-                  })}
-                </>
-              )}
+              {sortedSections.map(([section]) => {
+                const el = renderSectionCard(section);
+                if (!el) return null;
+                return (
+                  <MasonrySection key={section} fullWidth={section === 'Attachments'} spacedTop={section === 'Attachments'}>
+                    {el}
+                  </MasonrySection>
+                );
+              })}
             </TemplateMasonry>
           )}
         </div>
@@ -870,7 +879,6 @@ export default function Form() {
           <button
             type="button"
             onClick={handlePreview}
-            disabled={submitLoading}
             className="inline-flex items-center justify-center rounded-2xl border border-rose-500 bg-white px-5 py-3 text-[14px] font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
           >
             Preview
@@ -890,68 +898,6 @@ export default function Form() {
           </button>
         </div>
       </div>
-
-      {/* Preview modal */}
-      {previewOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => { setPreviewOpen(false); setPreviewEditing(false); }} />
-          <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl">
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-[16px] font-semibold text-slate-900">
-                Template Preview
-                {previewEditing ? (
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[12px] font-semibold text-slate-700">Editing</span>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  disabled={!previewBlob}
-                  className="rounded-2xl border border-rose-500 bg-white px-4 py-2 text-[13px] font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
-                >
-                  Download DOCX
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveAndDownload}
-                  className="rounded-2xl bg-rose-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-rose-600"
-                >
-                  Save and Download
-                </button>
-                <button
-                  type="button"
-                  aria-label="Close preview"
-                  onClick={() => { setPreviewOpen(false); setPreviewEditing(false); }}
-                  className="ml-1 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            <div className="max-h-[70vh] overflow-auto bg-slate-100 p-4">
-              <div className="mx-auto w-full max-w-[595px]">
-                <div
-                  ref={previewContentRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onFocus={() => setPreviewEditing(true)}
-                  onBlur={() => setPreviewEditing(false)}
-                  className={[
-                    'min-h-[400px] w-full rounded-xl border-2 bg-white p-6 outline-none transition shadow-sm',
-                    previewEditing ? 'border-slate-400 ring-4 ring-slate-200' : 'border-slate-200',
-                  ].join(' ')}
-                  style={{
-                    fontFamily: '"Aptos", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    fontSize: '13pt',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

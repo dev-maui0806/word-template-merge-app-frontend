@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import Header from '../components/Header.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useApp } from '../context/AppContext.jsx';
 import SubscriptionBadge from '../components/SubscriptionBadge.jsx';
 import { api } from '../api/client.js';
 
@@ -168,6 +169,7 @@ export default function Settings() {
 function SubscriptionSection() {
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+  const { country, countryTimezoneId } = useApp();
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [error, setError] = useState('');
   const [serverPlans, setServerPlans] = useState([]);
@@ -184,7 +186,11 @@ function SubscriptionSection() {
       setLoadingPrices(true);
       setPriceError('');
       try {
-        const res = await api('/payments/plans', { method: 'GET' });
+        const params = new URLSearchParams();
+        if (country) params.set('country', country);
+        if (countryTimezoneId) params.set('timezoneId', countryTimezoneId);
+        const q = params.toString();
+        const res = await api(`/payments/plans${q ? `?${q}` : ''}`, { method: 'GET' });
         if (!res.ok) throw new Error('Failed to load subscription prices');
         const data = await res.json();
         if (!cancelled) {
@@ -204,18 +210,28 @@ function SubscriptionSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [country, countryTimezoneId]);
 
   const plansWithPrices = PLANS.map((plan) => {
     const match = serverPlans.find((p) => p.id === plan.id);
-    const amount = match?.amountRupees;
-    const price =
-      typeof amount === 'number' && Number.isFinite(amount)
-        ? `₹${amount.toLocaleString('en-IN')}`
+    const inrAmount = match?.amountRupees;
+    const localAmount = match?.localAmount;
+    const localCurrency = match?.localCurrency;
+    const inrPrice =
+      typeof inrAmount === 'number' && Number.isFinite(inrAmount)
+        ? `₹${inrAmount.toLocaleString('en-IN')}`
+        : undefined;
+    const localPrice =
+      typeof localAmount === 'number' &&
+      Number.isFinite(localAmount) &&
+      localCurrency &&
+      localCurrency !== 'INR'
+        ? `${localCurrency} ${localAmount.toLocaleString('en-US')}`
         : undefined;
     return {
       ...plan,
-      price,
+      inrPrice,
+      localPrice,
     };
   });
 
@@ -322,10 +338,15 @@ function SubscriptionSection() {
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {plan.name}
                   </Typography>
-                  <Typography variant="h6" color="primary">
-                    {plan.price || (loadingPrices ? 'Loading…' : '—')}
+                  <Typography variant="h6" color="primary" sx={{ textAlign: 'right' }}>
+                    {plan.localPrice || plan.inrPrice || (loadingPrices ? 'Loading…' : '—')}
                   </Typography>
                 </Box>
+                {plan.localPrice && plan.inrPrice ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {plan.inrPrice} (INR)
+                  </Typography>
+                ) : null}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                   {plan.description}
                 </Typography>
