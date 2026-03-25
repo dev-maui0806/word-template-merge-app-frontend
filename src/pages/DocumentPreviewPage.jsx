@@ -129,14 +129,14 @@ export default function DocumentPreviewPage() {
   }, []);
 
   return (
-    <div className="document-preview-print-root min-h-screen bg-[#f3f4f6] print:min-h-0 print:bg-white">
-      <header className="no-print sticky top-0 z-20 border-b border-slate-200/80 bg-white shadow-sm print:hidden">
+    <div className="document-preview-print-root min-h-screen bg-[#f3f4f6] dark:bg-slate-950 print:min-h-0 print:bg-white">
+      <header className="no-print sticky top-0 z-20 border-b border-slate-200/80 bg-white shadow-sm print:hidden dark:border-slate-700 dark:bg-slate-900">
         <div className="mx-auto flex max-w-8xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <button
               type="button"
               onClick={handleBack}
-              className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               aria-label="Back to form"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -144,8 +144,8 @@ export default function DocumentPreviewPage() {
               </svg>
             </button>
             <div>
-              <h1 className="text-[18px] font-bold tracking-tight text-slate-900 sm:text-[20px]">Document Preview</h1>
-              <p className="mt-0.5 text-[14px] text-slate-500">Review and edit before downloading</p>
+              <h1 className="text-[18px] font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-[20px]">Document Preview</h1>
+              <p className="mt-0.5 text-[14px] text-slate-500 dark:text-slate-400">Review and edit before downloading</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -157,7 +157,7 @@ export default function DocumentPreviewPage() {
                 'inline-flex items-center gap-2 px-5 py-2 text-[14px] font-semibold shadow-sm transition',
                 isEditMode
                   ? 'rounded-xl border-2 border-[#a4f4cf] bg-[#ecfdf5] text-[#007a55] hover:bg-[#d0fae5]'
-                  : 'rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50',
+                  : 'rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
               ].join(' ')}
             >
               {isEditMode ? (
@@ -190,14 +190,14 @@ export default function DocumentPreviewPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:px-0 print:py-0">
         {loading ? (
-          <div className="flex min-h-[40vh] items-center justify-center text-[15px] text-slate-600">Generating preview…</div>
+          <div className="flex min-h-[40vh] items-center justify-center text-[15px] text-slate-600 dark:text-slate-400">Generating preview…</div>
         ) : error ? (
-          <div className="mx-auto max-w-lg rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800">
+          <div className="mx-auto max-w-lg rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200">
             {error}
             <button
               type="button"
               onClick={() => navigate(`/form/${actionSlug}`)}
-              className="mt-3 block text-[14px] font-semibold text-rose-700 underline"
+              className="mt-3 block text-[14px] font-semibold text-rose-700 underline dark:text-rose-400"
             >
               Back to form
             </button>
@@ -229,10 +229,10 @@ export default function DocumentPreviewPage() {
             ) : null}
             <div
               className={[
-                'rounded-xl bg-white px-6 py-10 md:px-12 md:py-14 print:rounded-none',
+                'rounded-xl bg-white px-6 py-10 md:px-12 md:py-14 print:rounded-none print:bg-white dark:bg-slate-900 dark:text-white',
                 isEditMode
                   ? 'border-2 border-[#00bc7d30] shadow-[0_0_0_1px_rgba(0,121,107,0.12),0_3px_4px_-3px_rgba(56,189,248,0.45),0_0_10px_-5px_rgba(14,165,233,0.35)]'
-                  : 'shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_2px_4px_-2px_rgba(0,0,0,0.06)]',
+                  : 'shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_2px_4px_-2px_rgba(0,0,0,0.06)] dark:border-slate-700',
                 'print:border-0 print:shadow-none',
               ].join(' ')}
             >
@@ -241,7 +241,7 @@ export default function DocumentPreviewPage() {
                 contentEditable={isEditMode}
                 suppressContentEditableWarning
                 className={[
-                  'min-h-[50vh] w-full outline-none print:min-h-0',
+                  'min-h-[50vh] w-full outline-none print:min-h-0 dark:text-white',
                   isEditMode ? '' : 'cursor-default select-text',
                 ].join(' ')}
                 style={{

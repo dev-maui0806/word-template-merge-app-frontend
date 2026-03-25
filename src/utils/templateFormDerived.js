@@ -44,7 +44,10 @@ export function pickTimeAutomationSeed(input) {
  */
 export function computeTemplateFormDerived(data) {
   const d = {};
-  const ev = data?.Event_Date;
+  const dataObj = data && typeof data === 'object' ? data : {};
+  const normalizeKey = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const eventDateKey = Object.keys(dataObj).find((k) => normalizeKey(k) === 'EVENTDATE');
+  const ev = eventDateKey ? dataObj[eventDateKey] : dataObj?.Event_Date;
   if (ev && dayjs(ev).isValid()) {
     d.Event_Day = deriveEventDayPreview(ev);
   }

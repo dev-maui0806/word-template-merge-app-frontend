@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton, Typography, Button } from '@mui/material';
+import { useMemo, useEffect, useState } from 'react';
+import { Box, Dialog, DialogContent, IconButton, Typography, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs from 'dayjs';
@@ -7,17 +7,28 @@ import dayjs from 'dayjs';
 const WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
 export default function DateWheelPickerDialog({ open, onClose, value, onConfirm, label = 'Select date' }) {
-  const initial = useMemo(() => {
-    if (value && dayjs(value).isValid()) {
-      return dayjs(value);
-    }
-    return dayjs();
+  const valueDate = useMemo(() => {
+    if (!value) return null;
+    const d = dayjs(value);
+    return d.isValid() ? d.startOf('day') : null;
   }, [value]);
 
-  const [currentMonth, setCurrentMonth] = useState(initial.startOf('month'));
-  const [selected, setSelected] = useState(initial.startOf('day'));
+  const initialMonth = useMemo(() => {
+    return (valueDate ?? dayjs()).startOf('month');
+  }, [valueDate]);
+
+  const today = useMemo(() => dayjs().startOf('day'), []);
+
+  const [currentMonth, setCurrentMonth] = useState(initialMonth);
+  const [selected, setSelected] = useState(valueDate); // null until user picks (unless backend value exists)
 
   const monthLabel = currentMonth.format('MMMM YYYY');
+
+  useEffect(() => {
+    if (!open) return;
+    setCurrentMonth(initialMonth);
+    setSelected(valueDate);
+  }, [open, initialMonth, valueDate]);
 
   const daysInMonth = currentMonth.daysInMonth();
   const firstWeekday = currentMonth.day(); // 0-6
@@ -38,13 +49,9 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
     setCurrentMonth((m) => m.add(1, 'month').startOf('month'));
   };
 
-  const handleConfirm = () => {
-    if (!selected) return;
-    onConfirm?.(selected.format('YYYY-MM-DD'));
-    onClose?.();
-  };
-
-  const handleCancel = () => {
+  const handleClose = () => {
+    // Design: only a single "CLOSE" button; apply selection if user chose one.
+    if (selected) onConfirm?.(selected.format('YYYY-MM-DD'));
     onClose?.();
   };
 
@@ -53,47 +60,31 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
   return (
     <Dialog
       open={open}
-      onClose={handleCancel}
+      onClose={handleClose}
       PaperProps={{
         sx: {
-          borderRadius: 4,
+          borderRadius: '22px',
           bgcolor: '#ffffff',
-          width: 320,
+          width: 360,
           maxWidth: '90vw',
           boxShadow: '0 30px 80px rgba(15,23,42,0.45)',
         },
       }}
     >
-      <DialogTitle
-        sx={{
-          px: 3,
-          pt: 3,
-          pb: 1.5,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{ textTransform: 'uppercase', letterSpacing: '0.16em', color: 'rgba(148,163,184,1)' }}
-        >
-          {label}
-        </Typography>
-      </DialogTitle>
       <DialogContent
         sx={{
-          pt: 1,
+          pt: 2.2,
           px: 3,
-          pb: 2.5,
+          pb: 4,
         }}
       >
         <Box
           sx={{
             borderRadius: 3,
-            bgcolor: '#f9fafb',
-            px: 2,
-            py: 2,
-            mb: 2.5,
+            bgcolor: '#ffffff',
+            px: 0,
+            py: 1.5,
+            mb: 1,
           }}
         >
           <Box
@@ -101,13 +92,21 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              mb: 1.5,
+              mb: 1.8,
             }}
           >
             <IconButton size="small" onClick={handlePrevMonth}>
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 700,
+                fontSize: '18px',
+                color: '#0f172a',
+                lineHeight: 1.1,
+              }}
+            >
               {monthLabel}
             </Typography>
             <IconButton size="small" onClick={handleNextMonth}>
@@ -119,8 +118,8 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
             sx={{
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
-              rowGap: 1,
-              columnGap: 0.5,
+              rowGap: 1.1,
+              columnGap: 0,
               textAlign: 'center',
             }}
           >
@@ -129,9 +128,10 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
                 key={d}
                 variant="caption"
                 sx={{
-                  fontWeight: 600,
-                  color: 'rgba(148,163,184,1)',
-                  letterSpacing: '0.08em',
+                  fontWeight: 700,
+                  color: 'rgba(100,116,139,0.7)',
+                  letterSpacing: '0.06em',
+                  fontSize: '14px',
                 }}
               >
                 {d}
@@ -141,28 +141,32 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
               if (!d) {
                 return <Box key={`empty-${idx}`} />;
               }
-              const active = isSameDay(d, selected);
+              const isSelected = isSameDay(d, selected);
+              const isToday = isSameDay(d, today);
               return (
                 <Box
                   key={d.date()}
                   onClick={() => setSelected(d)}
+                  className="hover:bg-[#eeeeee80] hover:text-[rgba(15,23,42,0.9)] transition-all duration-300"
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: 40,
+                    height: 40,
                     mx: 'auto',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    color: active ? '#ffffff' : 'rgba(15,23,42,0.9)',
-                    bgcolor: active ? '#f97373' : 'transparent',
-                    boxShadow: active ? '0 4px 10px rgba(248,113,113,0.6)' : 'none',
-                    transition: 'all 0.15s',
-                    '&:hover': {
-                      bgcolor: active ? '#f97373' : 'rgba(148,163,184,0.15)',
-                    },
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: isSelected ? '#ffffff' : isToday ? '#ff385c' : 'rgba(15,23,42,0.9)',
+                    bgcolor: isSelected ? '#ff385c' : isToday ? '#ff385c1a' : 'transparent',
+                    boxShadow: isSelected
+                      ? '0 10px 20px rgba(220,38,38,0.25)'
+                      : isToday
+                        ? '0 6px 14px rgba(244,63,94,0.16)'
+                        : 'none',
+                    transition: 'background-color 120ms ease',
                   }}
                 >
                   {d.date()}
@@ -172,30 +176,19 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+        <Box sx={{ borderTop: '1px solid rgba(226,232,240,1)', mt: 2, pt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
           <Button
-            onClick={handleCancel}
+            onClick={handleClose}
             sx={{
-              textTransform: 'none',
-              color: 'rgba(148,163,184,1)',
-              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'rgba(100,116,139,1)',
+              fontWeight: 700,
+              px: 2.2,
+              '&:hover': { bgcolor: 'transparent' },
             }}
           >
-            Close calendar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirm}
-            sx={{
-              ml: 1.5,
-              textTransform: 'none',
-              px: 3,
-              borderRadius: 999,
-              bgcolor: '#020617',
-              '&:hover': { bgcolor: '#020617' },
-            }}
-          >
-            Confirm
+            Close
           </Button>
         </Box>
       </DialogContent>

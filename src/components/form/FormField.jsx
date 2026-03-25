@@ -20,7 +20,9 @@ function AutoBadge() {
 }
 
 function FieldShell({ label, children, error, rightMeta, clientCard }) {
-  const labelCls = clientCard ? 'text-[#364153] text-[15px] font-semibold text-slate-900' : 'text-[#364153] text-[12px] font-medium text-slate-700';
+  const labelCls = clientCard
+    ? 'text-[#364153] text-[15px] font-semibold text-slate-900 dark:text-slate-100'
+    : 'text-[#364153] text-[12px] font-medium text-slate-700 dark:text-slate-300';
   return (
     <div className="w-full">
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -28,18 +30,18 @@ function FieldShell({ label, children, error, rightMeta, clientCard }) {
         {rightMeta}
       </div>
       {children}
-      {error ? <div className="mt-1 text-[12px] text-red-600">{error}</div> : null}
+      {error ? <div className="mt-1 text-[12px] text-red-600 dark:text-red-400">{error}</div> : null}
     </div>
   );
 }
 
 function clientInputClass({ clientCard, computed, hasValue }) {
   if (!clientCard) {
-    return 'h-14 w-full rounded-xl border border-slate-200 bg-white px-3 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200';
+    return 'h-14 w-full rounded-xl border border-slate-200 bg-white px-3 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40';
   }
-  const color = computed && hasValue ? 'text-[#4f46e5]' : 'text-slate-800';
+  const color = computed && hasValue ? 'text-[#4f46e5] dark:text-indigo-300' : 'text-slate-800 dark:text-slate-100';
   return [
-    'h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[17px] font-medium placeholder:text-slate-400 placeholder:font-normal shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300',
+    'h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[17px] font-medium placeholder:text-slate-400 placeholder:font-normal shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300 dark:border-slate-600 dark:bg-slate-800/90 dark:placeholder:text-slate-500 dark:focus:border-rose-500',
     color,
   ].join(' ');
 }
@@ -74,7 +76,7 @@ function TextAreaBase({ value, onChange, placeholder, readOnly, className }) {
 function InputIcon({ children }) {
   return (
     <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-      <div className="text-slate-400">{children}</div>
+      <div className="text-slate-400 dark:text-slate-500">{children}</div>
     </div>
   );
 }
@@ -86,7 +88,7 @@ function Pill({ active, children, onClick }) {
       onClick={onClick}
       className={[
         'h-8 rounded-full px-3 text-[13px] font-medium transition',
-        active ? 'bg-rose-500 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+        active ? 'bg-rose-500 text-white dark:bg-rose-600' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
       ].join(' ')}
     >
       {children}
@@ -140,8 +142,8 @@ export default function FormField({
   if (type === 'textarea') {
     const base = [
       clientCard
-        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[17px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100'
-        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200',
+        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[17px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40'
+        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40',
     ].join(' ');
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
@@ -332,13 +334,19 @@ export default function FormField({
     const showLabelRow = label != null && String(label).trim() !== '';
 
     const addBtnClass = clientCard
-      ? 'inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-400 bg-white px-3 text-[13px] font-semibold text-rose-500 shadow-sm hover:bg-rose-50'
-      : 'inline-flex h-8 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50';
+      ? 'inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-400 bg-white px-3 text-[13px] font-semibold text-rose-500 shadow-sm hover:bg-rose-50 dark:border-rose-500 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-slate-700'
+      : 'inline-flex h-8 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
 
     return (
       <div className={fullWidth ? 'col-span-full' : undefined}>
         <div className={`flex items-center justify-between ${showLabelRow ? '' : 'justify-end'}`}>
-          {showLabelRow ? <div className={clientCard ? 'text-[15px] font-bold text-slate-900' : 'text-[12px] font-medium text-slate-700'}>{label}</div> : <span />}
+          {showLabelRow ? (
+            <div className={clientCard ? 'text-[15px] font-bold text-slate-900 dark:text-slate-100' : 'text-[12px] font-medium text-slate-700 dark:text-slate-300'}>
+              {label}
+            </div>
+          ) : (
+            <span />
+          )}
           <button type="button" onClick={() => fileInputRef.current?.click()} className={addBtnClass}>
             {clientCard ? (
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -349,7 +357,7 @@ export default function FormField({
           </button>
         </div>
         <label
-          className="mt-3 flex min-h-[140px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] border-2 border-dashed border-slate-200 bg-slate-50/80 p-6 text-center shadow-[0_6px_18px_rgba(15,23,42,0.05)] transition hover:bg-slate-50"
+          className="mt-3 flex min-h-[140px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] border-2 border-dashed border-slate-200 bg-slate-50/80 p-6 text-center shadow-[0_6px_18px_rgba(15,23,42,0.05)] transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800/50 dark:shadow-none dark:hover:bg-slate-800"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -371,13 +379,13 @@ export default function FormField({
             }}
             hidden
           />
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 ring-1 ring-slate-200">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-600">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
             </svg>
           </div>
-          <div className="text-[14px] font-semibold text-slate-600">No attachments yet</div>
-          <div className="text-[13px] text-slate-400">Click &apos;Add Files&apos; to upload images or documents.</div>
+          <div className="text-[14px] font-semibold text-slate-600 dark:text-slate-300">No attachments yet</div>
+          <div className="text-[13px] text-slate-400 dark:text-slate-500">Click &apos;Add Files&apos; to upload images or documents.</div>
         </label>
         {hasImage && (
           <div className="mt-3 flex flex-col gap-3">
@@ -387,7 +395,7 @@ export default function FormField({
                   <img
                     src={typeof img === 'string' ? img : img?.preview}
                     alt="Uploaded"
-                    className="h-[140px] w-[140px] rounded-2xl border border-slate-200 bg-white object-contain p-1 shadow-sm"
+                    className="h-[140px] w-[140px] rounded-2xl border border-slate-200 bg-white object-contain p-1 shadow-sm dark:border-slate-600 dark:bg-slate-900"
                   />
                   <button
                     type="button"
@@ -402,7 +410,7 @@ export default function FormField({
               ))}
             </div>
             <div className="w-full max-w-[420px]">
-              <label className="flex items-center gap-2 text-[14px] text-slate-700">
+              <label className="flex items-center gap-2 text-[14px] text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={sizingMode === 'custom'}
@@ -412,13 +420,13 @@ export default function FormField({
                       mode: e.target.checked ? 'custom' : 'auto',
                     });
                   }}
-                  className="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-200"
+                  className="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-200 dark:border-slate-600 dark:focus:ring-rose-900/40"
                 />
                 Custom size
               </label>
               {sizingMode === 'custom' && (
-                <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="mb-2 text-[12px] font-medium text-slate-600">Width (% of page content)</div>
+                <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:shadow-none">
+                  <div className="mb-2 text-[12px] font-medium text-slate-600 dark:text-slate-400">Width (% of page content)</div>
                   <input
                     type="range"
                     min={10}
@@ -451,7 +459,7 @@ export default function FormField({
                         className={clientInputClass({ clientCard: false, computed: false, hasValue: true })}
                       />
                     </FieldShell>
-                    <div className="mt-1 text-[12px] text-slate-500">Keeps aspect ratio. Preview + final DOCX will use this size.</div>
+                    <div className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Keeps aspect ratio. Preview + final DOCX will use this size.</div>
                   </div>
                 </div>
               )}
