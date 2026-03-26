@@ -147,7 +147,7 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
                 <Box
                   key={d.date()}
                   onClick={() => setSelected(d)}
-                  className="hover:bg-[#eeeeee80] hover:text-[rgba(15,23,42,0.9)] transition-all duration-300"
+                  //className= "hover:bg-[#eeeeee80] hover:text-[rgba(15,23,42,0.9)] transition-all duration-300"
                   sx={{
                     width: 40,
                     height: 40,
@@ -167,6 +167,10 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
                         ? '0 6px 14px rgba(244,63,94,0.16)'
                         : 'none',
                     transition: 'background-color 120ms ease',
+                    ":hover": {
+                      bgcolor: isSelected ? '#ff385c': isToday ? '#ff385c1a' : '#eeeeee80',
+                      color: isSelected ? '#ffffff' : isToday ? '#ff385c' : 'rgba(3, 3, 3, 0.9)',
+                    },
                   }}
                 >
                   {d.date()}

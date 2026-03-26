@@ -237,9 +237,9 @@ function TypeToggle({ value, options, onChange }) {
     const v = String(opt || '').toLowerCase().replace(/\s+/g, '');
     if (v.includes('virtual')) {
       return (
-        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
-          <path d="M16 9l5-3v12l-5-3V9z" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-video w-4 h-4 transition-colors duration-200 text-gray-600 dark:text-gray-500" aria-hidden="true">
+          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
+          <rect x="2" y="6" width="14" height="12" rx="2"></rect>
         </svg>
       );
     }
@@ -662,7 +662,7 @@ export default function Form() {
           <AlertBox variant="error">{metaError || metadata?.error || 'Template not found'}</AlertBox>
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/')}
             className="mt-4 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[14px] font-semibold text-slate-700 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
           >
             <span aria-hidden>←</span> Back
@@ -717,7 +717,7 @@ export default function Form() {
             <div style={{fontWeight:500}} className="mb-1.5 text-[15px] font-medium text-slate-900 dark:text-slate-100">{f.label}</div>
             <input
               list={listId}
-              className="h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[18px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40"
+              className="h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[18px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40"
               placeholder={effectivePlaceholder}
               value={data[f.name] ?? ''}
               onChange={(e) => handleChange(f.name, e.target.value)}
@@ -775,7 +775,7 @@ export default function Form() {
           <div>
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/')}
               className="group mb-3 inline-flex items-center gap-3 rounded-xl py-2 text-slate-600 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             >
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_6px_16px_rgba(15,23,42,0.10)] transition group-hover:-translate-y-[1px] group-hover:bg-slate-50 group-hover:shadow-[0_10px_22px_rgba(15,23,42,0.14)] dark:border-slate-600 dark:bg-slate-800 dark:shadow-none dark:group-hover:bg-slate-700">

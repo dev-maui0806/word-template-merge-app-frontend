@@ -17,19 +17,56 @@ import { api } from '../api/client.js';
 
 const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
 
-const FONT_SIZES = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
+// Quill size values must be actual CSS values, and we include 13px as the default.
+const FONT_SIZES = ['10px', '12px', '13px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
 
 const Quill = ReactQuill?.Quill;
+let FONT_VALUES = ['Aptos', 'Arial', 'Georgia', 'Times New Roman', 'Verdana'];
+let fontUsesStyleAttributor = true;
 if (Quill) {
-  const SizeStyle = Quill.import('attributors/style/size');
-  SizeStyle.whitelist = FONT_SIZES;
-  Quill.register(SizeStyle, true);
+  // Sizes (safe-guarded for different Quill builds)
+  try {
+    const SizeStyle = Quill.import('attributors/style/size');
+    if (SizeStyle) {
+      SizeStyle.whitelist = FONT_SIZES;
+      Quill.register(SizeStyle, true);
+    }
+  } catch {
+    // ignore
+  }
+
+  // Fonts: prefer style-based attributor, but some Quill builds don't include it.
+  try {
+    const FontStyle = Quill.import('attributors/style/font');
+    if (FontStyle) {
+      FontStyle.whitelist = FONT_VALUES;
+      Quill.register(FontStyle, true);
+      fontUsesStyleAttributor = true;
+    } else {
+      throw new Error('missing style font attributor');
+    }
+  } catch {
+    fontUsesStyleAttributor = false;
+    // Fallback: class-based font format. Values must be class-friendly.
+    FONT_VALUES = ['arial', 'georgia', 'times-new-roman', 'verdana'];
+    try {
+      const FontFormat = Quill.import('formats/font');
+      if (FontFormat) {
+        FontFormat.whitelist = FONT_VALUES;
+        Quill.register(FontFormat, true);
+      }
+    } catch {
+      // ignore
+    }
+  }
 }
+
+const DEFAULT_FONT_VALUE = fontUsesStyleAttributor ? 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' : "inter";
 
 const modules = {
   toolbar: [
     [{ header: [1, 2, 3, 4, 5, 6, false] }],
-    [{ font: ['', 'serif', 'monospace', 'Arial', 'Times New Roman', 'Georgia', 'Verdana'] }],
+    [{ font: FONT_VALUES }],
     [{ size: FONT_SIZES }],
     ['bold', 'italic', 'underline', 'strike'],
     [{ color: [] }, { background: [] }],
@@ -47,11 +84,13 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
   const quillRef = useRef(null);
+  const defaultsAppliedRef = useRef(false);
 
   useEffect(() => {
     if (!open || !actionSlug) return;
 
     let cancelled = false;
+    defaultsAppliedRef.current = false;
     setLoading(true);
     setError('');
     setContent('');
@@ -87,6 +126,34 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
 
     return () => { cancelled = true; };
   }, [open, actionSlug, templateExists]);
+
+  useEffect(() => {
+    if (!open || loading) return;
+    if (defaultsAppliedRef.current) return;
+
+    const editor = quillRef.current?.getEditor?.();
+    if (!editor) return;
+
+    defaultsAppliedRef.current = true;
+
+    // Normalize the entire template so the editor toolbar + saved output
+    // are always consistent: Aptos at 13px.
+    const len = editor.getLength?.() ?? 1;
+    const safeLen = Math.max(1, len);
+
+    editor.setSelection(Math.max(0, safeLen - 1), 0, 'silent');
+    editor.format('font', DEFAULT_FONT_VALUE, 'silent');
+    editor.format('size', '13px', 'silent');
+
+    // Overwrite existing formatting in the template.
+    if (typeof editor.formatText === 'function') {
+      editor.formatText(0, safeLen, 'font', DEFAULT_FONT_VALUE, 'silent');
+      editor.formatText(0, safeLen, 'size', '13px', 'silent');
+    }
+
+    // Keep ReactQuill's `value` in sync so "Save Template" persists the change.
+    setContent(editor.root?.innerHTML ?? content);
+  }, [open, loading, actionSlug]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -162,6 +229,38 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
               flex: 1,
               overflow: 'auto',
               '& .quill': { height: '100%', display: 'flex', flexDirection: 'column' },
+              // Quill uses hardcoded "Normal" labels for custom sizes unless we
+              // override the picker label/item content.
+              '&& .ql-snow .ql-picker.ql-size .ql-picker-label::before': {
+                content: 'attr(data-value)',
+              },
+              '&& .ql-snow .ql-picker.ql-size .ql-picker-item::before': {
+                content: 'attr(data-value)',
+              },
+              // Same issue for the font picker: without overrides, Quill's default
+              // CSS doesn't label custom font values (shows "Sans Serif" repeatedly).
+              '&& .ql-snow .ql-picker.ql-font .ql-picker-label::before': {
+                content: 'attr(data-value)',
+              },
+              '&& .ql-snow .ql-picker.ql-font .ql-picker-item::before': {
+                content: 'attr(data-value)',
+              },
+              '&& .ql-snow .ql-picker.ql-font .ql-picker-label:not([data-value])::before': {
+                content: '"Aptos"',
+              },
+              // If we fall back to class-based font format, map labels + actual font-families.
+              '&& .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="aptos"]::before, && .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="aptos"]::before': {
+                content: '"Aptos"',
+              },
+              '&& .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before, && .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before': {
+                content: '"Times New Roman"',
+              },
+              '& .ql-font-aptos': {
+                fontFamily: '"Aptos", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              },
+              '& .ql-font-times-new-roman': {
+                fontFamily: '"Times New Roman", Times, serif',
+              },
               '& .ql-container': {
                 flex: 1,
                 fontSize: 16,
@@ -173,6 +272,7 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
                 minHeight: 300,
                 color: 'white',
                 fontSize: 16,
+                fontFamily: '"Aptos", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                 '&.ql-blank::before': { color: 'rgba(255,255,255,0.4)' },
               },
               '& .ql-toolbar.ql-snow': {

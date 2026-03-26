@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Dialog, DialogContent, Button, Typography } from '@mui/material';
 
 function pad2(n) {
@@ -17,6 +17,8 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
 
   const [hour, setHour] = useState(initial.hour);
   const [minute, setMinute] = useState(initial.minute);
+  const wheelAccRef = useRef({ hour: 0, minute: 0 });
+  const wheelLastStepRef = useRef({ hour: 0, minute: 0 });
 
   const currentDisplay = `${pad2(hour)}:${pad2(minute)}`;
 
@@ -24,6 +26,10 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
     if (!open) return;
     setHour(initial.hour);
     setMinute(initial.minute);
+    wheelAccRef.current.hour = 0;
+    wheelAccRef.current.minute = 0;
+    wheelLastStepRef.current.hour = 0;
+    wheelLastStepRef.current.minute = 0;
   }, [open, initial.hour, initial.minute]);
 
   const handleConfirm = () => {
@@ -60,26 +66,54 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
     userSelect: 'none',
   };
 
-  const stepFromWheelDelta = (deltaY) => {
-    // Trackpads can emit small deltas; snap to +/- 1 when scrolling meaningfully.
+  const normalizeWheelDelta = (deltaY, deltaMode) => {
+    // Normalize wheel units so "threshold" behaves similarly across devices.
+    // deltaMode: 0=pixels, 1=lines, 2=pages
     if (!Number.isFinite(deltaY)) return 0;
-    if (Math.abs(deltaY) < 1) return 0;
-    return deltaY < 0 ? -1 : 1;
+    if (deltaMode === 1) return deltaY * 20; // line -> px-ish
+    if (deltaMode === 2) return deltaY * 60; // page -> px-ish
+    return deltaY; // pixels
+  };
+
+  const WHEEL_STEP_THRESHOLD = 40; // accumulated delta needed for 1 step
+  const WHEEL_MIN_INTERVAL_MS = 100; // max 1 step per this interval per digit
+
+  const stepFromAccum = (acc) => {
+    if (!Number.isFinite(acc) || Math.abs(acc) < WHEEL_STEP_THRESHOLD) return 0;
+    return acc < 0 ? -1 : 1;
   };
 
   const handleWheelHour = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const step = stepFromWheelDelta(e.deltaY);
+    const d = normalizeWheelDelta(e.deltaY, e.deltaMode);
+    wheelAccRef.current.hour += d;
+
+    const now = performance.now();
+    if (now - wheelLastStepRef.current.hour < WHEEL_MIN_INTERVAL_MS) return;
+
+    const step = stepFromAccum(wheelAccRef.current.hour);
     if (!step) return;
+
+    wheelAccRef.current.hour -= step * WHEEL_STEP_THRESHOLD; // keep remainder for smoother direction changes
+    wheelLastStepRef.current.hour = now;
     setHour((prev) => mod(prev + step, 24));
   };
 
   const handleWheelMinute = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const step = stepFromWheelDelta(e.deltaY);
+    const d = normalizeWheelDelta(e.deltaY, e.deltaMode);
+    wheelAccRef.current.minute += d;
+
+    const now = performance.now();
+    if (now - wheelLastStepRef.current.minute < WHEEL_MIN_INTERVAL_MS) return;
+
+    const step = stepFromAccum(wheelAccRef.current.minute);
     if (!step) return;
+
+    wheelAccRef.current.minute -= step * WHEEL_STEP_THRESHOLD;
+    wheelLastStepRef.current.minute = now;
     setMinute((prev) => mod(prev + step, 60));
   };
 

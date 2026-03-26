@@ -142,8 +142,8 @@ export default function FormField({
   if (type === 'textarea') {
     const base = [
       clientCard
-        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[17px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40'
-        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40',
+        ? 'min-h-[120px] w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 py-3 text-[17px] text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40'
+        : 'min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[17px] text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40',
     ].join(' ');
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
