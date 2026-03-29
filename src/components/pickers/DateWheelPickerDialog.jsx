@@ -55,6 +55,13 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
     onClose?.();
   };
 
+  const handleSelectDate = (d) => {
+    if (!d) return;
+    setSelected(d);
+    onConfirm?.(d.format('YYYY-MM-DD'));
+    onClose?.();
+  };
+
   const isSameDay = (a, b) => a && b && a.isSame(b, 'day');
 
   return (
@@ -146,7 +153,7 @@ export default function DateWheelPickerDialog({ open, onClose, value, onConfirm,
               return (
                 <Box
                   key={d.date()}
-                  onClick={() => setSelected(d)}
+                  onClick={() => handleSelectDate(d)}
                   //className= "hover:bg-[#eeeeee80] hover:text-[rgba(15,23,42,0.9)] transition-all duration-300"
                   sx={{
                     width: 40,

@@ -19,6 +19,10 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
   const [minute, setMinute] = useState(initial.minute);
   const wheelAccRef = useRef({ hour: 0, minute: 0 });
   const wheelLastStepRef = useRef({ hour: 0, minute: 0 });
+  const touchRef = useRef({
+    hour: { y: null, lastStepAt: 0 },
+    minute: { y: null, lastStepAt: 0 },
+  });
 
   const currentDisplay = `${pad2(hour)}:${pad2(minute)}`;
 
@@ -30,6 +34,10 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
     wheelAccRef.current.minute = 0;
     wheelLastStepRef.current.hour = 0;
     wheelLastStepRef.current.minute = 0;
+    touchRef.current.hour.y = null;
+    touchRef.current.hour.lastStepAt = 0;
+    touchRef.current.minute.y = null;
+    touchRef.current.minute.lastStepAt = 0;
   }, [open, initial.hour, initial.minute]);
 
   const handleConfirm = () => {
@@ -77,6 +85,8 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
 
   const WHEEL_STEP_THRESHOLD = 40; // accumulated delta needed for 1 step
   const WHEEL_MIN_INTERVAL_MS = 100; // max 1 step per this interval per digit
+  const TOUCH_STEP_THRESHOLD_PX = 14;
+  const TOUCH_MIN_INTERVAL_MS = 55;
 
   const stepFromAccum = (acc) => {
     if (!Number.isFinite(acc) || Math.abs(acc) < WHEEL_STEP_THRESHOLD) return 0;
@@ -115,6 +125,43 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
     wheelAccRef.current.minute -= step * WHEEL_STEP_THRESHOLD;
     wheelLastStepRef.current.minute = now;
     setMinute((prev) => mod(prev + step, 60));
+  };
+
+  const onTouchStartFor = (kind) => (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    touchRef.current[kind].y = t.clientY;
+  };
+
+  const onTouchMoveFor = (kind) => (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    const state = touchRef.current[kind];
+    if (state.y == null) {
+      state.y = t.clientY;
+      return;
+    }
+
+    const delta = t.clientY - state.y;
+    if (Math.abs(delta) < TOUCH_STEP_THRESHOLD_PX) return;
+
+    const now = performance.now();
+    if (now - state.lastStepAt < TOUCH_MIN_INTERVAL_MS) return;
+
+    // Swipe up => next value (+1), swipe down => previous value (-1).
+    const step = delta < 0 ? 1 : -1;
+    if (kind === 'hour') {
+      setHour((prev) => mod(prev + step, 24));
+    } else {
+      setMinute((prev) => mod(prev + step, 60));
+    }
+    state.lastStepAt = now;
+    state.y = t.clientY;
+    e.preventDefault();
+  };
+
+  const onTouchEndFor = (kind) => () => {
+    touchRef.current[kind].y = null;
   };
 
   return (
@@ -196,7 +243,13 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
                       boxShadow: '0 10px 24px rgba(255,56,92,0.10)',
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52 }} onWheel={handleWheelHour}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52, touchAction: 'none' }}
+                      onWheel={handleWheelHour}
+                      onTouchStart={onTouchStartFor('hour')}
+                      onTouchMove={onTouchMoveFor('hour')}
+                      onTouchEnd={onTouchEndFor('hour')}
+                    >
                       <Typography sx={selectedDigitSx}>{pad2(hour)}</Typography>
                     </Box>
                     <Box
@@ -212,7 +265,13 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
                       <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'rgba(148,163,184,1)' }} />
                       <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'rgba(148,163,184,1)' }} />
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52 }} onWheel={handleWheelMinute}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52, touchAction: 'none' }}
+                      onWheel={handleWheelMinute}
+                      onTouchStart={onTouchStartFor('minute')}
+                      onTouchMove={onTouchMoveFor('minute')}
+                      onTouchEnd={onTouchEndFor('minute')}
+                    >
                       <Typography sx={selectedDigitSx}>{pad2(minute)}</Typography>
                     </Box>
                   </Box>
@@ -240,8 +299,12 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
                       ...digitSx,
                       cursor: 'pointer',
                       opacity: 1,
+                      touchAction: 'none',
                     }}
                     onWheel={handleWheelHour}
+                    onTouchStart={onTouchStartFor('hour')}
+                    onTouchMove={onTouchMoveFor('hour')}
+                    onTouchEnd={onTouchEndFor('hour')}
                   >
                     {pad2(hVal)}
                   </Box>
@@ -256,8 +319,12 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
                       ...digitSx,
                       cursor: 'pointer',
                       opacity: 1,
+                      touchAction: 'none',
                     }}
                     onWheel={handleWheelMinute}
+                    onTouchStart={onTouchStartFor('minute')}
+                    onTouchMove={onTouchMoveFor('minute')}
+                    onTouchEnd={onTouchEndFor('minute')}
                   >
                     {pad2(mVal)}
                   </Box>

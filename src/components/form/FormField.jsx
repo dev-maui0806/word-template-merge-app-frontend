@@ -110,10 +110,14 @@ export default function FormField({
 }) {
   const { name, type, label, options = [], fullWidth, computed: fieldComputed, autoBadge: fieldAutoBadge } = field;
   const computed = !!fieldComputed;
+  const normalizedName = String(name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const isLockedAutoField = normalizedName === 'EVENTTYPE' || normalizedName === 'EVENTDAY';
+  const isReadOnlyField = isLockedAutoField;
+  const computedForStyle = computed && isReadOnlyField;
   const effectivePlaceholder = resolveFieldPlaceholder(field);
 
   const safeChange = (n, v) => {
-    if (computed) return;
+    if (isReadOnlyField) return;
     onChange(n, v);
   };
 
@@ -125,15 +129,15 @@ export default function FormField({
   const hasVal = (v) => v != null && String(v).trim() !== '';
 
   if (type === 'text') {
-    const base = clientInputClass({ clientCard, computed, hasValue: hasVal(value) });
+    const base = clientInputClass({ clientCard, computed: computedForStyle, hasValue: hasVal(value) });
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <InputBase
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
-          readOnly={computed}
-          className={[base, computed ? 'cursor-default' : ''].join(' ')}
+          readOnly={isReadOnlyField}
+          className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
     );
@@ -151,18 +155,17 @@ export default function FormField({
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
-          readOnly={computed}
-          className={[base, computed ? 'cursor-default' : ''].join(' ')}
+          readOnly={isReadOnlyField}
+          className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
     );
   }
 
-  if (type === 'date' && computed) {
+  if (type === 'date' && isReadOnlyField) {
     const raw = value ?? '';
     const d = raw ? dayjs(raw) : null;
-    const display =
-      raw && d?.isValid() ? (clientCard ? d.format('MM/DD/YYYY') : d.format('DD/MM/YYYY')) : String(raw || '');
+    const display = raw && d?.isValid() ? d.format('DD/MM/YYYY') : String(raw || '');
     const base = clientInputClass({ clientCard, computed: true, hasValue: hasVal(display) });
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
@@ -170,7 +173,7 @@ export default function FormField({
           <InputBase
             value={display}
             onChange={() => {}}
-            placeholder={effectivePlaceholder}
+            placeholder="dd/mm/yyyy"
             readOnly
             className={[base, 'cursor-default pr-10'].join(' ')}
           />
@@ -188,7 +191,7 @@ export default function FormField({
 
   if (type === 'date') {
     const dateValue = value && dayjs(value).isValid() ? dayjs(value) : null;
-    const display = dateValue ? (clientCard ? dateValue.format('MM/DD/YYYY') : dateValue.format('DD/MM/YYYY')) : '';
+    const display = dateValue ? dateValue.format('DD/MM/YYYY') : '';
     const base = clientInputClass({ clientCard, computed: false, hasValue: hasVal(display) });
     return (
       <>
@@ -197,7 +200,7 @@ export default function FormField({
             <InputBase
               value={display}
               onChange={() => {}}
-              placeholder={effectivePlaceholder}
+              placeholder="dd/mm/yyyy"
               readOnly
               onClick={() => setDatePickerOpen(true)}
               className={[base, 'cursor-pointer pr-10'].join(' ')}
@@ -228,9 +231,9 @@ export default function FormField({
       ? dayjs(`1970-01-01T${value}`)
       : null;
     const display = timeValue ? timeValue.format('HH:mm') : '';
-    const base = clientInputClass({ clientCard, computed, hasValue: hasVal(display) });
+    const base = clientInputClass({ clientCard, computed: computedForStyle, hasValue: hasVal(display) });
 
-    if (computed) {
+    if (isReadOnlyField) {
       return (
         <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
@@ -254,7 +257,7 @@ export default function FormField({
 
     return (
       <>
-        <FieldShell label={label} error={error} clientCard={clientCard}>
+        <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
             <InputBase
               value={display}
@@ -285,16 +288,16 @@ export default function FormField({
   }
 
   if (type === 'number') {
-    const base = clientInputClass({ clientCard, computed, hasValue: hasVal(value) });
+    const base = clientInputClass({ clientCard, computed: computedForStyle, hasValue: hasVal(value) });
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <InputBase
-          type={computed ? 'text' : 'number'}
+          type={isReadOnlyField ? 'text' : 'number'}
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
-          readOnly={computed}
-          className={[base, computed ? 'cursor-default' : ''].join(' ')}
+          readOnly={isReadOnlyField}
+          className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
     );
