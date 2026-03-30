@@ -46,9 +46,27 @@ function clientInputClass({ clientCard, computed, hasValue }) {
   ].join(' ');
 }
 
-function InputBase({ value, onChange, placeholder, type = 'text', readOnly, onClick, className }) {
+function focusFormFieldByName(fieldName) {
+  if (!fieldName) return;
+  const el = document.getElementById(`form-field-${fieldName}`);
+  if (el && typeof el.focus === 'function') el.focus();
+}
+
+/** Enter advances to next field. Textarea: Ctrl+Enter or Cmd+Enter advances; plain Enter inserts newline. */
+function handleEnterToNextField(e, nextFieldName, options = {}) {
+  const { textarea = false } = options;
+  if (!nextFieldName || e.key !== 'Enter') return;
+  if (textarea) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+  }
+  e.preventDefault();
+  focusFormFieldByName(nextFieldName);
+}
+
+function InputBase({ value, onChange, placeholder, type = 'text', readOnly, onClick, className, id, onKeyDown }) {
   return (
     <input
+      id={id}
       className={className}
       type={type}
       value={value ?? ''}
@@ -56,19 +74,22 @@ function InputBase({ value, onChange, placeholder, type = 'text', readOnly, onCl
       placeholder={placeholder}
       readOnly={readOnly}
       onClick={onClick}
+      onKeyDown={onKeyDown}
     />
   );
 }
 
-function TextAreaBase({ value, onChange, placeholder, readOnly, className }) {
+function TextAreaBase({ value, onChange, placeholder, readOnly, className, id, onKeyDown }) {
   return (
     <textarea
+      id={id}
       className={className}
       rows={4}
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
       readOnly={readOnly}
+      onKeyDown={onKeyDown}
     />
   );
 }
@@ -81,11 +102,13 @@ function InputIcon({ children }) {
   );
 }
 
-function Pill({ active, children, onClick }) {
+function Pill({ active, children, onClick, id, onKeyDown }) {
   return (
     <button
       type="button"
+      id={id}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       className={[
         'h-8 rounded-full px-3 text-[13px] font-medium transition',
         active ? 'bg-rose-500 text-white dark:bg-rose-600' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
@@ -107,6 +130,7 @@ export default function FormField({
   onImageLayoutChange,
   error,
   clientCard = false,
+  nextFieldName,
 }) {
   const { name, type, label, options = [], fullWidth, computed: fieldComputed, autoBadge: fieldAutoBadge } = field;
   const computed = !!fieldComputed;
@@ -133,10 +157,12 @@ export default function FormField({
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <InputBase
+          id={`form-field-${name}`}
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
           readOnly={isReadOnlyField}
+          onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
           className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
@@ -152,10 +178,12 @@ export default function FormField({
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <TextAreaBase
+          id={`form-field-${name}`}
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
           readOnly={isReadOnlyField}
+          onKeyDown={(e) => handleEnterToNextField(e, nextFieldName, { textarea: true })}
           className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
@@ -171,10 +199,12 @@ export default function FormField({
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <div className="relative">
           <InputBase
+            id={`form-field-${name}`}
             value={display}
             onChange={() => {}}
             placeholder="dd/mm/yyyy"
             readOnly
+            onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
             className={[base, 'cursor-default pr-10'].join(' ')}
           />
           <InputIcon>
@@ -198,11 +228,13 @@ export default function FormField({
         <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
             <InputBase
+              id={`form-field-${name}`}
               value={display}
               onChange={() => {}}
               placeholder="dd/mm/yyyy"
               readOnly
               onClick={() => setDatePickerOpen(true)}
+              onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
               className={[base, 'cursor-pointer pr-10'].join(' ')}
             />
             <InputIcon>
@@ -238,10 +270,12 @@ export default function FormField({
         <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
             <InputBase
+              id={`form-field-${name}`}
               value={display}
               onChange={() => {}}
               placeholder={effectivePlaceholder}
               readOnly
+              onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
               className={[base, 'cursor-default pr-10'].join(' ')}
             />
             <InputIcon>
@@ -260,11 +294,13 @@ export default function FormField({
         <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
           <div className="relative">
             <InputBase
+              id={`form-field-${name}`}
               value={display}
               onChange={() => {}}
               placeholder={effectivePlaceholder}
               readOnly
               onClick={() => setTimePickerOpen(true)}
+              onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
               className={[base, 'cursor-pointer pr-10'].join(' ')}
             />
             <InputIcon>
@@ -292,11 +328,13 @@ export default function FormField({
     return (
       <FieldShell label={label} error={error} rightMeta={autoMeta} clientCard={clientCard}>
         <InputBase
+          id={`form-field-${name}`}
           type={isReadOnlyField ? 'text' : 'number'}
           value={value ?? ''}
           onChange={(e) => safeChange(name, e.target.value)}
           placeholder={effectivePlaceholder}
           readOnly={isReadOnlyField}
+          onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
           className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>
@@ -308,9 +346,11 @@ export default function FormField({
       return (
         <FieldShell label={label} error={error} clientCard={clientCard}>
           <InputBase
+            id={`form-field-${name}`}
             value={value ?? ''}
             onChange={(e) => safeChange(name, e.target.value)}
             placeholder={effectivePlaceholder}
+            onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
             className={clientInputClass({ clientCard, computed: false, hasValue: hasVal(value) })}
           />
         </FieldShell>
@@ -319,8 +359,19 @@ export default function FormField({
     return (
       <FieldShell label={label} error={error} clientCard={clientCard}>
         <div className="flex flex-wrap items-center gap-2">
-          {options.map((opt) => (
-            <Pill key={opt} active={(value ?? '') === opt} onClick={() => safeChange(name, opt)}>
+          {options.map((opt, idx) => (
+            <Pill
+              key={opt}
+              id={idx === 0 ? `form-field-${name}` : undefined}
+              active={(value ?? '') === opt}
+              onClick={() => safeChange(name, opt)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  focusFormFieldByName(nextFieldName);
+                }
+              }}
+            >
               {opt}
             </Pill>
           ))}
@@ -350,7 +401,13 @@ export default function FormField({
           ) : (
             <span />
           )}
-          <button type="button" onClick={() => fileInputRef.current?.click()} className={addBtnClass}>
+          <button
+            type="button"
+            id={`form-field-${name}`}
+            onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
+            onClick={() => fileInputRef.current?.click()}
+            className={addBtnClass}
+          >
             {clientCard ? (
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -476,9 +533,11 @@ export default function FormField({
   return (
     <FieldShell label={label} error={error} clientCard={clientCard}>
       <InputBase
+        id={`form-field-${name}`}
         value={value ?? ''}
         onChange={(e) => safeChange(name, e.target.value)}
         placeholder={effectivePlaceholder}
+        onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
         className={clientInputClass({ clientCard, computed: false, hasValue: hasVal(value) })}
       />
     </FieldShell>

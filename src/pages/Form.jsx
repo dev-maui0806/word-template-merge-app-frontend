@@ -695,6 +695,19 @@ export default function Form() {
     return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
   });
 
+  /** Same order as rendered section cards → next field on Enter (must not be a hook: code runs only after loading/error guards) */
+  const nextFieldNameByField = (() => {
+    const names = [];
+    for (const [, fs] of sortedSections) {
+      for (const f of fs) names.push(f.name);
+    }
+    const m = new Map();
+    for (let i = 0; i < names.length - 1; i += 1) {
+      m.set(names[i], names[i + 1]);
+    }
+    return m;
+  })();
+
   const isArrangeVenue = actionSlug === 'arrange-venue';
 
   const sectionMap = (() => {
@@ -716,11 +729,19 @@ export default function Form() {
           <div className="w-full">
             <div style={{fontWeight:500}} className="mb-1.5 text-[15px] font-medium text-slate-900 dark:text-slate-100">{f.label}</div>
             <input
+              id="form-field-Claimant_Name"
               list={listId}
               className="h-14 w-full rounded-[14px] border border-[#d9dbea] bg-[#f8f9fd] px-4 text-[18px] font-medium text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-[#ff385c] focus:ring-1 focus:ring-[#ff385c] hover:border-[#ff385c] hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-[#FF385C] transition-all duration-300 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-rose-500 dark:focus:ring-rose-900/40"
               placeholder={effectivePlaceholder}
               value={data[f.name] ?? ''}
               onChange={(e) => handleChange(f.name, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                const next = nextFieldNameByField.get('Claimant_Name');
+                if (!next) return;
+                e.preventDefault();
+                document.getElementById(`form-field-${next}`)?.focus();
+              }}
             />
             <datalist id={listId}>
               {claimantOptions.map((opt) => (
@@ -743,6 +764,7 @@ export default function Form() {
           onImageRemove={handleImageRemove}
           imageLayout={f.type === 'image' ? imageLayout[f.name] : undefined}
           onImageLayoutChange={handleImageLayoutChange}
+          nextFieldName={nextFieldNameByField.get(f.name)}
           clientCard
         />
       </div>

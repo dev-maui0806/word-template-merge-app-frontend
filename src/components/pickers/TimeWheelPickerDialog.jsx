@@ -6,6 +6,11 @@ function pad2(n) {
 }
 
 export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm, label = 'Select time' }) {
+  const ITEM_HEIGHT = 48;
+  const VISIBLE_ROWS = 5;
+  const LIST_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
+  const EDGE_SPACER = ITEM_HEIGHT * 2;
+
   const initial = useMemo(() => {
     if (typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)) {
       const [h, m] = value.split(':').map((v) => parseInt(v, 10));
@@ -17,27 +22,22 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
 
   const [hour, setHour] = useState(initial.hour);
   const [minute, setMinute] = useState(initial.minute);
-  const wheelAccRef = useRef({ hour: 0, minute: 0 });
-  const wheelLastStepRef = useRef({ hour: 0, minute: 0 });
-  const touchRef = useRef({
-    hour: { y: null, lastStepAt: 0 },
-    minute: { y: null, lastStepAt: 0 },
-  });
+  const hourListRef = useRef(null);
+  const minuteListRef = useRef(null);
 
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []);
   const currentDisplay = `${pad2(hour)}:${pad2(minute)}`;
 
   useEffect(() => {
     if (!open) return;
     setHour(initial.hour);
     setMinute(initial.minute);
-    wheelAccRef.current.hour = 0;
-    wheelAccRef.current.minute = 0;
-    wheelLastStepRef.current.hour = 0;
-    wheelLastStepRef.current.minute = 0;
-    touchRef.current.hour.y = null;
-    touchRef.current.hour.lastStepAt = 0;
-    touchRef.current.minute.y = null;
-    touchRef.current.minute.lastStepAt = 0;
+
+    requestAnimationFrame(() => {
+      if (hourListRef.current) hourListRef.current.scrollTop = initial.hour * ITEM_HEIGHT;
+      if (minuteListRef.current) minuteListRef.current.scrollTop = initial.minute * ITEM_HEIGHT;
+    });
   }, [open, initial.hour, initial.minute]);
 
   const handleConfirm = () => {
@@ -49,119 +49,37 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
     onClose?.();
   };
 
-  const rowOffsets = [-2, -1, 0, 1, 2];
-  const mod = (n, m) => ((n % m) + m) % m;
-  const hourRowValues = rowOffsets.map((o) => mod(hour + o, 24));
-  const minuteRowValues = rowOffsets.map((o) => mod(minute + o, 60));
+  const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
-  const digitSx = {
-    fontSize: '20px',
-    fontWeight: 500,
-    color: 'rgba(148,163,184,1)',
-    lineHeight: 1,
-    height: 50,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    userSelect: 'none',
+  const handleHourScroll = (e) => {
+    const idx = clamp(Math.round(e.currentTarget.scrollTop / ITEM_HEIGHT), 0, 23);
+    setHour(idx);
   };
 
-  const selectedDigitSx = {
-    fontSize: '20px',
-    fontWeight: 700,
-    color: '#ff385c',
-    lineHeight: 1.1,
-    userSelect: 'none',
+  const handleMinuteScroll = (e) => {
+    const idx = clamp(Math.round(e.currentTarget.scrollTop / ITEM_HEIGHT), 0, 59);
+    setMinute(idx);
   };
 
-  const normalizeWheelDelta = (deltaY, deltaMode) => {
-    // Normalize wheel units so "threshold" behaves similarly across devices.
-    // deltaMode: 0=pixels, 1=lines, 2=pages
-    if (!Number.isFinite(deltaY)) return 0;
-    if (deltaMode === 1) return deltaY * 20; // line -> px-ish
-    if (deltaMode === 2) return deltaY * 60; // page -> px-ish
-    return deltaY; // pixels
+  const scrollToHour = (h) => {
+    if (!hourListRef.current) return;
+    hourListRef.current.scrollTo({ top: h * ITEM_HEIGHT, behavior: 'smooth' });
   };
 
-  const WHEEL_STEP_THRESHOLD = 40; // accumulated delta needed for 1 step
-  const WHEEL_MIN_INTERVAL_MS = 100; // max 1 step per this interval per digit
-  const TOUCH_STEP_THRESHOLD_PX = 14;
-  const TOUCH_MIN_INTERVAL_MS = 55;
-
-  const stepFromAccum = (acc) => {
-    if (!Number.isFinite(acc) || Math.abs(acc) < WHEEL_STEP_THRESHOLD) return 0;
-    return acc < 0 ? -1 : 1;
+  const scrollToMinute = (m) => {
+    if (!minuteListRef.current) return;
+    minuteListRef.current.scrollTo({ top: m * ITEM_HEIGHT, behavior: 'smooth' });
   };
 
-  const handleWheelHour = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const d = normalizeWheelDelta(e.deltaY, e.deltaMode);
-    wheelAccRef.current.hour += d;
-
-    const now = performance.now();
-    if (now - wheelLastStepRef.current.hour < WHEEL_MIN_INTERVAL_MS) return;
-
-    const step = stepFromAccum(wheelAccRef.current.hour);
-    if (!step) return;
-
-    wheelAccRef.current.hour -= step * WHEEL_STEP_THRESHOLD; // keep remainder for smoother direction changes
-    wheelLastStepRef.current.hour = now;
-    setHour((prev) => mod(prev + step, 24));
-  };
-
-  const handleWheelMinute = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const d = normalizeWheelDelta(e.deltaY, e.deltaMode);
-    wheelAccRef.current.minute += d;
-
-    const now = performance.now();
-    if (now - wheelLastStepRef.current.minute < WHEEL_MIN_INTERVAL_MS) return;
-
-    const step = stepFromAccum(wheelAccRef.current.minute);
-    if (!step) return;
-
-    wheelAccRef.current.minute -= step * WHEEL_STEP_THRESHOLD;
-    wheelLastStepRef.current.minute = now;
-    setMinute((prev) => mod(prev + step, 60));
-  };
-
-  const onTouchStartFor = (kind) => (e) => {
-    const t = e.touches?.[0];
-    if (!t) return;
-    touchRef.current[kind].y = t.clientY;
-  };
-
-  const onTouchMoveFor = (kind) => (e) => {
-    const t = e.touches?.[0];
-    if (!t) return;
-    const state = touchRef.current[kind];
-    if (state.y == null) {
-      state.y = t.clientY;
-      return;
-    }
-
-    const delta = t.clientY - state.y;
-    if (Math.abs(delta) < TOUCH_STEP_THRESHOLD_PX) return;
-
-    const now = performance.now();
-    if (now - state.lastStepAt < TOUCH_MIN_INTERVAL_MS) return;
-
-    // Swipe up => next value (+1), swipe down => previous value (-1).
-    const step = delta < 0 ? 1 : -1;
-    if (kind === 'hour') {
-      setHour((prev) => mod(prev + step, 24));
-    } else {
-      setMinute((prev) => mod(prev + step, 60));
-    }
-    state.lastStepAt = now;
-    state.y = t.clientY;
-    e.preventDefault();
-  };
-
-  const onTouchEndFor = (kind) => () => {
-    touchRef.current[kind].y = null;
+  const wheelListSx = {
+    height: LIST_HEIGHT,
+    overflowY: 'auto',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    scrollSnapType: 'y mandatory',
+    WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+    maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+    '&::-webkit-scrollbar': { display: 'none' },
   };
 
   return (
@@ -178,11 +96,7 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
         },
       }}
     >
-      <DialogContent
-        sx={{
-          p: 0,
-        }}
-      >
+      <DialogContent sx={{ p: 0 }}>
         <Box sx={{ px: 3, pt: 3, pb: 1.4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography
@@ -212,125 +126,88 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
         </Box>
 
         <Box sx={{ px: 3, pt: 0.6, pb: 2 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 20px 1fr',
-              alignItems: 'center',
-            }}
-          >
-            {rowOffsets.map((offset, rowIdx) => {
-              const hVal = hourRowValues[rowIdx];
-              const mVal = minuteRowValues[rowIdx];
+          <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 20px 1fr', alignItems: 'center' }}>
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: EDGE_SPACER,
+                height: ITEM_HEIGHT,
+                borderRadius: '16px',
+                border: '1px solid rgba(255,56,92,0.55)',
+                bgcolor: 'rgba(255,56,92,0.06)',
+                boxShadow: '0 10px 24px rgba(255,56,92,0.10)',
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            />
 
-              if (offset === 0) {
+            <Box ref={hourListRef} onScroll={handleHourScroll} sx={wheelListSx}>
+              <Box sx={{ height: EDGE_SPACER, scrollSnapAlign: 'start' }} />
+              {hours.map((h) => {
+                const active = h === hour;
                 return (
                   <Box
-                    key="selected"
+                    key={h}
+                    onClick={() => scrollToHour(h)}
                     sx={{
-                      gridColumn: '1 / -1',
-                      mx: 'auto',
-                      width: '100%',
-                      maxWidth: 270,
-                      height: 54,
-                      borderRadius: '16px',
-                      border: '1px solid rgba(255,56,92,0.55)',
-                      bgcolor: 'rgba(255,56,92,0.06)',
+                      height: ITEM_HEIGHT,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      px: 6,
-                      boxShadow: '0 10px 24px rgba(255,56,92,0.10)',
+                      justifyContent: 'center',
+                      scrollSnapAlign: 'center',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      fontSize: '20px',
+                      transition: 'all 200ms ease',
+                      transform: active ? 'scale(1.1)' : 'scale(1)',
+                      fontWeight: active ? 700 : 500,
+                      color: active ? '#FF385C' : 'rgba(148,163,184,1)',
                     }}
                   >
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52, touchAction: 'none' }}
-                      onWheel={handleWheelHour}
-                      onTouchStart={onTouchStartFor('hour')}
-                      onTouchMove={onTouchMoveFor('hour')}
-                      onTouchEnd={onTouchEndFor('hour')}
-                    >
-                      <Typography sx={selectedDigitSx}>{pad2(hour)}</Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        width: 14,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'rgba(148,163,184,1)' }} />
-                      <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'rgba(148,163,184,1)' }} />
-                    </Box>
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 52, touchAction: 'none' }}
-                      onWheel={handleWheelMinute}
-                      onTouchStart={onTouchStartFor('minute')}
-                      onTouchMove={onTouchMoveFor('minute')}
-                      onTouchEnd={onTouchEndFor('minute')}
-                    >
-                      <Typography sx={selectedDigitSx}>{pad2(minute)}</Typography>
-                    </Box>
+                    {pad2(h)}
                   </Box>
                 );
-              }
+              })}
+              <Box sx={{ height: EDGE_SPACER, scrollSnapAlign: 'end' }} />
+            </Box>
 
-              return (
-                <Box
-                  key={`row-${offset}`}
-                  sx={{
-                    gridColumn: '1 / -1',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 20px 1fr',
-                    alignItems: 'center',
-                    pointerEvents: 'auto',
-                  }}
-                >
+            <Box sx={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+              <Typography className="animate-pulse" sx={{ fontSize: '24px', fontWeight: 700, color: 'rgba(148,163,184,1)' }}>
+                :
+              </Typography>
+            </Box>
+
+            <Box ref={minuteListRef} onScroll={handleMinuteScroll} sx={wheelListSx}>
+              <Box sx={{ height: EDGE_SPACER, scrollSnapAlign: 'start' }} />
+              {minutes.map((m) => {
+                const active = m === minute;
+                return (
                   <Box
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      setHour(hVal);
-                    }}
+                    key={m}
+                    onClick={() => scrollToMinute(m)}
                     sx={{
-                      ...digitSx,
+                      height: ITEM_HEIGHT,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      scrollSnapAlign: 'center',
                       cursor: 'pointer',
-                      opacity: 1,
-                      touchAction: 'none',
+                      userSelect: 'none',
+                      fontSize: '20px',
+                      transition: 'all 200ms ease',
+                      transform: active ? 'scale(1.1)' : 'scale(1)',
+                      fontWeight: active ? 700 : 500,
+                      color: active ? '#FF385C' : 'rgba(148,163,184,1)',
                     }}
-                    onWheel={handleWheelHour}
-                    onTouchStart={onTouchStartFor('hour')}
-                    onTouchMove={onTouchMoveFor('hour')}
-                    onTouchEnd={onTouchEndFor('hour')}
                   >
-                    {pad2(hVal)}
+                    {pad2(m)}
                   </Box>
-                  <Box sx={{}} />
-                  <Box
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      setMinute(mVal);
-                    }}
-                    sx={{
-                      ...digitSx,
-                      cursor: 'pointer',
-                      opacity: 1,
-                      touchAction: 'none',
-                    }}
-                    onWheel={handleWheelMinute}
-                    onTouchStart={onTouchStartFor('minute')}
-                    onTouchMove={onTouchMoveFor('minute')}
-                    onTouchEnd={onTouchEndFor('minute')}
-                  >
-                    {pad2(mVal)}
-                  </Box>
-                </Box>
-              );
-            })}
+                );
+              })}
+              <Box sx={{ height: EDGE_SPACER, scrollSnapAlign: 'end' }} />
+            </Box>
           </Box>
         </Box>
 
@@ -352,7 +229,7 @@ export default function TimeWheelPickerDialog({ open, onClose, value, onConfirm,
             </Button>
             <Button
               onClick={handleConfirm}
-              className='hover:bg-[#E31C5F] hover:shadow-lg hover:shadow-[#FF385C]/30 transition-all duration-150 hover:-translate-y-0.5'
+              className="hover:bg-[#E31C5F] hover:shadow-lg hover:shadow-[#FF385C]/30 transition-all duration-150 hover:-translate-y-0.5"
               sx={{
                 textTransform: 'uppercase',
                 fontWeight: 700,
