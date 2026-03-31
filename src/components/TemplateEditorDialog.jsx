@@ -136,23 +136,12 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
 
     defaultsAppliedRef.current = true;
 
-    // Normalize the entire template so the editor toolbar + saved output
-    // are always consistent: Aptos at 13px.
-    const len = editor.getLength?.() ?? 1;
-    const safeLen = Math.max(1, len);
-
-    editor.setSelection(Math.max(0, safeLen - 1), 0, 'silent');
+    // Set defaults for *new typing* only.
+    // Do NOT reformat the entire document, otherwise we destroy the original DOCX's
+    // paragraph styles, theme colors, and run-level formatting.
+    editor.setSelection(0, 0, 'silent');
     editor.format('font', DEFAULT_FONT_VALUE, 'silent');
     editor.format('size', '13px', 'silent');
-
-    // Overwrite existing formatting in the template.
-    if (typeof editor.formatText === 'function') {
-      editor.formatText(0, safeLen, 'font', DEFAULT_FONT_VALUE, 'silent');
-      editor.formatText(0, safeLen, 'size', '13px', 'silent');
-    }
-
-    // Keep ReactQuill's `value` in sync so "Save Template" persists the change.
-    setContent(editor.root?.innerHTML ?? content);
   }, [open, loading, actionSlug]);
 
   const handleSave = async () => {
