@@ -63,7 +63,19 @@ function handleEnterToNextField(e, nextFieldName, options = {}) {
   focusFormFieldByName(nextFieldName);
 }
 
-function InputBase({ value, onChange, placeholder, type = 'text', readOnly, onClick, className, id, onKeyDown }) {
+function InputBase({
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  readOnly,
+  onClick,
+  className,
+  id,
+  onKeyDown,
+  inputMode,
+  pattern,
+}) {
   return (
     <input
       id={id}
@@ -75,6 +87,8 @@ function InputBase({ value, onChange, placeholder, type = 'text', readOnly, onCl
       readOnly={readOnly}
       onClick={onClick}
       onKeyDown={onKeyDown}
+      inputMode={inputMode}
+      pattern={pattern}
     />
   );
 }
@@ -151,6 +165,10 @@ export default function FormField({
 
   const autoMeta = computed || fieldAutoBadge ? <AutoBadge /> : null;
   const hasVal = (v) => v != null && String(v).trim() !== '';
+  const fieldText = `${String(name || '')} ${String(label || '')}`.toLowerCase();
+  const isStrictNumericTextField =
+    type === 'text' &&
+    (fieldText.includes('venue number') || String(name || '').toUpperCase() === 'VENUE_NUMBER');
 
   if (type === 'text') {
     const base = clientInputClass({ clientCard, computed: computedForStyle, hasValue: hasVal(value) });
@@ -159,10 +177,17 @@ export default function FormField({
         <InputBase
           id={`form-field-${name}`}
           value={value ?? ''}
-          onChange={(e) => safeChange(name, e.target.value)}
+          onChange={(e) => {
+            const next = isStrictNumericTextField
+              ? String(e.target.value || '').replace(/\D+/g, '')
+              : e.target.value;
+            safeChange(name, next);
+          }}
           placeholder={effectivePlaceholder}
           readOnly={isReadOnlyField}
           onKeyDown={(e) => handleEnterToNextField(e, nextFieldName)}
+          inputMode={isStrictNumericTextField ? 'numeric' : undefined}
+          pattern={isStrictNumericTextField ? '[0-9]*' : undefined}
           className={[base, isReadOnlyField ? 'cursor-default' : ''].join(' ')}
         />
       </FieldShell>

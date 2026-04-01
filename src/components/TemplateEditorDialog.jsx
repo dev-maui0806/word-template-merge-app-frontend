@@ -9,7 +9,6 @@ import {
   Box,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import SaveIcon from '@mui/icons-material/Save';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import mammoth from 'mammoth';
@@ -80,11 +79,11 @@ const modules = {
 
 export default function TemplateEditorDialog({ open, onClose, actionSlug, actionLabel, templateExists, onSaved }) {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
   const quillRef = useRef(null);
   const defaultsAppliedRef = useRef(false);
+  const isReadOnlyPreview = true;
 
   useEffect(() => {
     if (!open || !actionSlug) return;
@@ -144,27 +143,6 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
     editor.format('size', '13px', 'silent');
   }, [open, loading, actionSlug]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      const res = await api(`/admin/templates/${actionSlug}/save`, {
-        method: 'POST',
-        body: JSON.stringify({ html: content }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Save failed');
-      }
-      onSaved?.();
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Save failed');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <Dialog
       open={open}
@@ -193,7 +171,7 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
             {actionLabel || actionSlug}
           </Box>
           <Box component="span" sx={{ ml: 2, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-            {templateExists ? 'Edit template' : 'Create new template'}
+            {templateExists ? 'Template preview (read-only)' : 'No template uploaded yet'}
           </Box>
         </Box>
         <Button startIcon={<CloseIcon />} onClick={onClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
@@ -280,7 +258,8 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
               theme="snow"
               value={content}
               onChange={setContent}
-              modules={modules}
+              modules={isReadOnlyPreview ? { toolbar: false } : modules}
+              readOnly={isReadOnlyPreview}
               placeholder="Start typing or paste content..."
               style={{ height: 'calc(100vh - 200px)' }}
             />
@@ -295,22 +274,14 @@ export default function TemplateEditorDialog({ open, onClose, actionSlug, action
             py: 2,
             borderTop: '1px solid rgba(255,255,255,0.1)',
             bgcolor: '#1e293b',
+            justifyContent: 'space-between',
           }}
         >
+          <Box sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
+            To keep DOCX formatting identical, update templates by uploading a DOCX file.
+          </Box>
           <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-            onClick={handleSave}
-            disabled={saving}
-            sx={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              '&:hover': { background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Template'}
+            Close
           </Button>
         </DialogActions>
       )}
