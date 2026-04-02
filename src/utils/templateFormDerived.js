@@ -3,7 +3,8 @@ import { convertKmToMilesClient, deriveEventDayPreview, runTimeAutomationClient 
 
 /**
  * Preferred order for time-automation seed (align with backend).
- * Any other `Start_Time_*` with a value is tried after this list, then `Event_Time`.
+ * Any other field whose name starts with `Start_Time` (case-insensitive) is tried after this list.
+ * `Event_Time` is not used as a seed — automation runs only when a start-time field is set.
  */
 const TIME_SEED_PRIORITY = [
   'Start_Time_For_Booking_Venue',
@@ -30,13 +31,13 @@ export function pickTimeAutomationSeed(input) {
     const v = nonEmptyTrimmed(input[key]);
     if (v) return v;
   }
-  const startKeys = Object.keys(input).filter((k) => k.startsWith('Start_Time_'));
+  const startKeys = Object.keys(input).filter((k) => k.toLowerCase().startsWith('start_time'));
   startKeys.sort();
   for (const key of startKeys) {
     const v = nonEmptyTrimmed(input[key]);
     if (v) return v;
   }
-  return nonEmptyTrimmed(input.Event_Time);
+  return null;
 }
 
 /**
